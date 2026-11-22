@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SLIDIFY</title>
+<style>
+  :root {
+    --ink: #000000;
+    --grey-1: #333333;
+    --grey-2: #595959;
+    --grey-3: #808080;
+    --grey-4: #A6A6A6;
+    --line: #E3E3E3;
+    --wash: #F5F5F5;
+    --bg: #FFFFFF;
+    --font: "Nirmala Text", "Nirmala UI", "Segoe UI", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font); }
+  body { min-height: 100vh; }
+  button, input, textarea, select { font: inherit; color: inherit; }
+
+  header { padding: 28px 40px 0; display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; }
+  header h1 { margin: 0; font-weight: 400; font-size: 30px; letter-spacing: .14em; color: var(--grey-3); }
+  header p { margin: 0; color: var(--grey-4); font-size: 16px; }
+
+  main { display: grid; grid-template-columns: minmax(300px, 400px) 1fr; gap: 40px; padding: 28px 40px 48px; }
+  @media (max-width: 860px) {
+    header { padding: 20px 16px 0; }
+    main { grid-template-columns: 1fr; padding: 20px 16px 40px; gap: 28px; }
+  }
+
+  .panel h2, .result h2 { margin: 0 0 14px; font-weight: 400; font-size: 22px; color: var(--grey-4); }
+  label.title { display: block; font-size: 14px; color: var(--grey-3); margin: 18px 0 6px; }
+  textarea, input[type=text], select {
+    width: 100%; border: 1px solid var(--line); border-radius: 6px; background: var(--bg);
+    padding: 10px 12px; font-size: 16px; outline: none;
+  }
+  textarea:focus, input:focus, select:focus { border-color: var(--grey-3); }
+  textarea { min-height: 120px; resize: vertical; line-height: 1.5; }
+
+  .drop {
+    border: 1px dashed var(--grey-4); border-radius: 6px; padding: 22px 16px; text-align: center;
+    color: var(--grey-3); cursor: pointer; transition: background .15s, border-color .15s;
+  }
+  .drop.over { background: var(--wash); border-color: var(--grey-2); }
+  .drop strong { color: var(--grey-1); font-weight: 400; }
+  .drop small { display: block; margin-top: 4px; color: var(--grey-4); }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .chip { display: inline-flex; align-items: center; gap: 8px; background: var(--wash); border-radius: 14px;
+          padding: 4px 6px 4px 12px; font-size: 14px; color: var(--grey-1); max-width: 100%; }
+  .chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .chip button { border: 0; background: none; cursor: pointer; color: var(--grey-3); font-size: 16px; line-height: 1; padding: 2px 6px; }
+
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .check { display: flex; align-items: center; gap: 10px; margin-top: 18px; color: var(--grey-1); cursor: pointer; }
+  .check input { width: 18px; height: 18px; accent-color: var(--grey-1); }
+
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border-radius: 6px;
+         padding: 11px 20px; cursor: pointer; font-size: 16px; text-decoration: none; transition: background .15s; }
+  .btn.primary { width: 100%; margin-top: 24px; background: var(--grey-1); color: #fff; border: 1px solid var(--grey-1); }
+  .btn.primary:hover { background: #000; }
+  .btn.primary:disabled { background: var(--grey-4); border-color: var(--grey-4); cursor: default; }
+  .btn.ghost { background: var(--bg); color: var(--grey-1); border: 1px solid var(--line); }
+  .btn.ghost:hover { border-color: var(--grey-3); }
+  .error { color: #8a1f1f; font-size: 14px; margin-top: 10px; min-height: 1em; }
+
+  .result { min-width: 0; }
+  .empty { border: 1px solid var(--line); border-radius: 8px; aspect-ratio: 16/9; max-width: 760px;
+           display: grid; place-items: center; text-align: center; color: var(--grey-4); padding: 24px; }
+  .empty div { font-size: 22px; }
+  .empty small { display: block; font-size: 15px; margin-top: 6px; }
+
+  .status { display: flex; align-items: center; gap: 12px; color: var(--grey-2); margin-bottom: 18px; min-height: 24px; }
+  .spinner { width: 18px; height: 18px; border: 2px solid var(--line); border-top-color: var(--grey-2);
+             border-radius: 50%; animation: spin .9s linear infinite; flex: none; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .downloads { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 22px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
+  .thumb { position: relative; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; cursor: zoom-in; background: #fff; padding: 0; }
+  .thumb img { display: block; width: 100%; aspect-ratio: 16/9; object-fit: cover; }
+  .thumb span { position: absolute; left: 8px; bottom: 6px; font-size: 12px; color: var(--grey-4); }
+
+  .revise { margin-top: 28px; max-width: 760px; }
+  .revise .bar { display: flex; gap: 10px; margin-top: 8px; }
+  .revise textarea { min-height: 70px; }
+
+  .lightbox { position: fixed; inset: 0; background: rgba(40,40,40,.88); display: none; place-items: center; padding: 24px; z-index: 10; }
+  .lightbox.open { display: grid; }
+  .lightbox img { max-width: min(1400px, 100%); max-height: 86vh; background: #fff; box-shadow: 0 10px 40px rgba(0,0,0,.4); }
+  .lightbox .nav { position: fixed; top: 50%; transform: translateY(-50%); border: 0; background: rgba(255,255,255,.12);
+                   color: #fff; font-size: 28px; width: 48px; height: 48px; border-radius: 50%; cursor: pointer; }
+  .lightbox .prev { left: 16px; } .lightbox .next { right: 16px; }
+  .lightbox .close { position: fixed; top: 14px; right: 18px; border: 0; background: none; color: #fff; font-size: 30px; cursor: pointer; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<header>
+  <h1>SLIDIFY</h1>
+  <p>Signature decks from a topic, a Word file, a PDF or pictures</p>
+</header>
+
+<main>
+  <form class="panel" id="form" autocomplete="off">
+    <h2>New deck</h2>
+
+    <label class="title" for="brief">Topic, notes or instructions</label>
+    <textarea id="brief" name="brief" placeholder="e.g. Employment generation in KP for the CM briefing, focus on TVET reform"></textarea>
+
+    <label class="title">Source files</label>
+    <div class="drop" id="drop" tabindex="0" role="button" aria-label="Add Word, PDF or picture files">
+      <strong>Drop files here</strong> or click to choose
+      <small>Word (.docx) · PDF · Pictures (.png .jpg .webp) · Text</small>
+    </div>
+    <input type="file" id="files" multiple accept=".docx,.pdf,.png,.jpg,.jpeg,.webp,.gif,.txt,.md" hidden>
+    <div class="chips" id="chips"></div>
+
+    <div class="row">
+      <div>
+        <label class="title" for="date">Date on title slide</label>
+        <input type="text" id="date" name="date">
+      </div>
+      <div>
+        <label class="title" for="max">Slides (max)</label>
+        <select id="max" name="max_slides"></select>
+      </div>
+    </div>
+
+    <label class="check"><input type="checkbox" id="agenda" checked> Add a Sequence (agenda) slide</label>
+
+    <button class="btn primary" id="go" type="submit">Make deck</button>
+    <div class="error" id="error" role="alert"></div>
+  </form>
+
+  <section class="result" aria-live="polite">
+    <h2 id="deckTitle">Preview</h2>
+    <div class="status" id="status" hidden><div class="spinner" id="spin"></div><span id="statusText"></span></div>
+
+    <div class="empty" id="empty">
+      <div>Your slides appear here<small>Download as PowerPoint, PDF, pictures or Word</small></div>
+    </div>
+
+    <div class="downloads" id="downloads" hidden>
+      <a class="btn ghost" data-kind="pptx">PowerPoint</a>
+      <a class="btn ghost" data-kind="pdf">PDF</a>
+      <a class="btn ghost" data-kind="zip">Pictures (.zip)</a>
+      <a class="btn ghost" data-kind="docx">Word</a>
+    </div>
+
+    <div class="grid" id="grid"></div>
+
+    <div class="revise" id="revise" hidden>
+      <label class="title" for="feedback">Change something</label>
+      <textarea id="feedback" placeholder="e.g. Merge slides 4 & 5, add a slide on costs, shorter lines on Impact"></textarea>
+      <div class="bar"><button class="btn ghost" id="apply" type="button">Apply changes</button></div>
+    </div>
+  </section>
+</main>
+
+<div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Slide preview">
+  <button class="close" id="lbClose" aria-label="Close">×</button>
+  <button class="nav prev" id="lbPrev" aria-label="Previous slide">‹</button>
+  <img id="lbImg" alt="">
+  <button class="nav next" id="lbNext" aria-label="Next slide">›</button>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+let picked = [];
+let jobId = null;
+let slides = [];
+let lbIndex = 0;
+let timer = null;
+
+// Defaults
+const months = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
+const now = new Date();
+$("date").value = `${months[now.getMonth()]}, ${now.getFullYear()}`;
+for (let n = 12; n >= 5; n--) $("max").add(new Option(n, n));
+
+// Files
+function renderChips() {
+  $("chips").innerHTML = "";
+  picked.forEach((f, i) => {
+    const c = document.createElement("div");
+    c.className = "chip";
+    c.innerHTML = `<span></span><button type="button" aria-label="Remove">×</button>`;
+    c.querySelector("span").textContent = f.name;
+    c.querySelector("button").onclick = () => { picked.splice(i, 1); renderChips(); };
+    $("chips").appendChild(c);
+  });
+}
+function addFiles(list) {
+  for (const f of list) if (!picked.some(p => p.name === f.name && p.size === f.size)) picked.push(f);
+  renderChips();
+}
+$("drop").onclick = () => $("files").click();
+$("drop").onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); $("files").click(); } };
+$("files").onchange = (e) => { addFiles(e.target.files); e.target.value = ""; };
+["dragenter","dragover"].forEach(t => $("drop").addEventListener(t, e => { e.preventDefault(); $("drop").classList.add("over"); }));
+["dragleave","drop"].forEach(t => $("drop").addEventListener(t, e => { e.preventDefault(); $("drop").classList.remove("over"); }));
+$("drop").addEventListener("drop", e => addFiles(e.dataTransfer.files));
+
+// Status
+function busy(on, text) {
+  $("status").hidden = !text;
+  $("spin").hidden = !on;
+  $("statusText").textContent = text || "";
+  $("go").disabled = on;
+  $("apply").disabled = on;
+}
+
+function show(job) {
+  if (job.title) $("deckTitle").textContent = job.title;
+  if (job.slides && job.slides.length) {
+    slides = job.slides.map(s => s + "?v=" + job.version);
+    $("empty").hidden = true;
+    $("grid").innerHTML = "";
+    slides.forEach((src, i) => {
+      const b = document.createElement("button");
+      b.className = "thumb"; b.type = "button";
+      b.innerHTML = `<img alt="Slide ${i + 1}" loading="lazy"><span>${i + 1}</span>`;
+      b.querySelector("img").src = src;
+      b.onclick = () => openLb(i);
+      $("grid").appendChild(b);
+    });
+    document.querySelectorAll("#downloads a").forEach(a => {
+      a.href = job.downloads[a.dataset.kind] + "?download=1";
+    });
+    $("downloads").hidden = false;
+    $("revise").hidden = false;
+  }
+}
+
+async function poll() {
+  clearTimeout(timer);
+  const r = await fetch(`/api/jobs/${jobId}`);
+  if (!r.ok) { busy(false, "Lost track of this deck. Make it again."); return; }
+  const job = await r.json();
+  if (job.status === "done") {
+    busy(false, `Ready · ${job.slides.length} slides`);
+    show(job);
+  } else if (job.status === "error") {
+    busy(false, "");
+    $("error").textContent = job.message;
+  } else {
+    busy(true, job.message);
+    timer = setTimeout(poll, 2000);
+  }
+}
+
+$("form").onsubmit = async (e) => {
+  e.preventDefault();
+  $("error").textContent = "";
+  const fd = new FormData();
+  fd.append("brief", $("brief").value);
+  fd.append("date", $("date").value);
+  fd.append("max_slides", $("max").value);
+  fd.append("agenda", $("agenda").checked ? "true" : "false");
+  picked.forEach(f => fd.append("files", f));
+  if (!$("brief").value.trim() && !picked.length) { $("error").textContent = "Write a topic or add a file."; return; }
+  busy(true, "Uploading...");
+  try {
+    const r = await fetch("/api/jobs", { method: "POST", body: fd });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || "Something went wrong.");
+    jobId = d.id;
+    $("grid").innerHTML = ""; $("downloads").hidden = true; $("revise").hidden = true;
+    $("empty").hidden = false; $("deckTitle").textContent = "Preview";
+    poll();
+  } catch (err) { busy(false, ""); $("error").textContent = err.message; }
+};
+
+$("apply").onclick = async () => {
+  const feedback = $("feedback").value.trim();
+  if (!feedback || !jobId) return;
+  $("error").textContent = "";
+  busy(true, "Applying your changes...");
+  const r = await fetch(`/api/jobs/${jobId}/revise`, {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ feedback })
+  });
+  const d = await r.json();
+  if (!r.ok) { busy(false, ""); $("error").textContent = d.error; return; }
+  $("feedback").value = "";
+  poll();
+};
+
+// Lightbox
+function openLb(i) { lbIndex = i; $("lbImg").src = slides[i]; $("lightbox").classList.add("open"); $("lbClose").focus(); }
+function closeLb() { $("lightbox").classList.remove("open"); }
+function step(d) { openLb((lbIndex + d + slides.length) % slides.length); }
+$("lbClose").onclick = closeLb;
+$("lbPrev").onclick = (e) => { e.stopPropagation(); step(-1); };
+$("lbNext").onclick = (e) => { e.stopPropagation(); step(1); };
+$("lightbox").onclick = (e) => { if (e.target.id === "lightbox") closeLb(); };
+document.addEventListener("keydown", (e) => {
+  if (!$("lightbox").classList.contains("open")) return;
+  if (e.key === "Escape") closeLb();
+  if (e.key === "ArrowLeft") step(-1);
+  if (e.key === "ArrowRight") step(1);
+});
+</script>
+</body>
+</html>

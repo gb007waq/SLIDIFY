@@ -36,6 +36,22 @@ The full guide is in [skills/slidify/STYLE.md](skills/slidify/STYLE.md). The bui
 
 Decks are saved to `Documents\Slidify` unless you name another folder.
 
+## The SLIDIFY app
+
+A web page on your computer for making decks without typing in Claude Code.
+
+- **Put in:** a topic or notes, plus Word (.docx), PDF, pictures or text files
+- **Get out:** PowerPoint, PDF, slide pictures (.zip) and Word, with a preview of every slide
+- **Change something:** type what to change ("merge slides 4 & 5") and it rebuilds the deck
+
+Start it (installs what it needs, then opens your browser at http://127.0.0.1:8765):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\app\start.ps1
+```
+
+The app asks your installed Claude Code to write the slides, so you need Claude Code installed and signed in. There's no API key and no separate bill. Each deck takes about 1-2 minutes.
+
 ## What's inside
 
 | Path | What it is |
@@ -45,6 +61,8 @@ Decks are saved to `Documents\Slidify` unless you name another folder.
 | `skills/slidify/STYLE.md` | The signature style guide |
 | `skills/slidify/reference/` | The reference deck the style comes from |
 | `skills/slidify/scripts/build_deck.py` | Builds the `.pptx` and enforces the style |
+| `skills/slidify/scripts/export_deck.py` | Exports a deck as PDF, slide pictures and Word |
+| `app/` | The SLIDIFY web app (`start.ps1` runs it) |
 | `skills/slidify/assets/` | Optional logos: `logo_title.png`, `logo_top.png`, `logo_corner.png` |
 | `examples/` | A sample spec and the deck it builds |
 

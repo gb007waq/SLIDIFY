@@ -54,7 +54,10 @@ If you can read PDFs, look at `reference/CMPO Gov.pdf` too: match its tone, line
    It needs `python-pptx`; Pillow gives exact line-fit checks. If they are missing, run `python -m pip install --user python-pptx pillow`.
 
 6. **If the style check fails,** shorten the flagged lines (never split them) and build again until it prints `OK`.
-7. **Report** the `.pptx` path and list the slide headings.
+7. **Other formats:** if the user wants PDF, slide pictures or Word as well, run
+   `python "<skill base directory>/scripts/export_deck.py" spec.json <output folder>`.
+   It writes `.pptx`, `.pdf`, `.docx`, one PNG per slide and a zip of the PNGs.
+8. **Report** the file paths and list the slide headings.
 
 ## Logos
 
