@@ -35,6 +35,9 @@ DOC_TYPES = {".docx"}
 READ_TYPES = {".pdf", ".png", ".jpg", ".jpeg", ".webp", ".gif"}
 ALLOWED = TEXT_TYPES | DOC_TYPES | READ_TYPES
 MAX_TRIES = 4
+MAX_CUSTOM = 99        # largest custom slide count
+BIG = 40               # above this many slides, plan headings first and write in batches
+BATCH = 40             # content slides written per batch
 CLAUDE_TIMEOUT = 600
 
 app = Flask(__name__, static_folder=str(ROOT / "static"), static_url_path="/static")
@@ -72,7 +75,7 @@ def claude_exe():
     return exe
 
 
-def run_claude(prompt, cwd, session=None):
+def run_claude(prompt, cwd, session=None, timeout=CLAUDE_TIMEOUT):
     """Run Claude Code headless. Returns (text, session_id)."""
     cmd = [claude_exe(), "-p", "--output-format", "json",
            "--tools", "Read", "--allowedTools", "Read",
@@ -83,7 +86,7 @@ def run_claude(prompt, cwd, session=None):
            if not (k.startswith("CLAUDECODE") or k.startswith("CLAUDE_CODE_"))}
     proc = subprocess.run(cmd, input=prompt, capture_output=True, text=True,
                           encoding="utf-8", errors="replace", cwd=cwd, env=env,
-                          timeout=CLAUDE_TIMEOUT)
+                          timeout=timeout)
     out = proc.stdout.strip()
     try:
         data = json.loads(out)
@@ -111,7 +114,7 @@ def slide_limits(mode, n):
     if mode == "long":
         return 15, 20
     if mode == "custom":
-        n = max(3, min(40, n or 12))
+        n = max(3, min(MAX_CUSTOM, n or 12))
         return n, n
     return 12, 12
 
@@ -165,26 +168,173 @@ def first_prompt(job):
     return "\n".join(lines)
 
 
-def make_deck(jid, prompt, session=None, limits=(1, bd.MAX_SLIDES)):
+SLIDE_SCHEMA = ('{"heading": str, "lines": [str]} or {"heading": str, "left": [str], "right": [str]}')
+
+
+def per_slide_errors(spec):
+    """{content index (0-based): [errors]} using the builder's own checks."""
+    bad = {}
+    for i, s in enumerate(spec.get("slides", [])):
+        errs = bd.validate({"title": "x", "slides": [s]}, 1, 10**6)
+        if errs:
+            bad[i] = [e.split(": ", 1)[-1] for e in errs]
+    return bad
+
+
+def deck_errors(spec, limits):
+    return [e for e in bd.validate(spec, *limits) if not e.startswith("Slide ")]
+
+
+def fix_slides(jid, spec, session, folder):
+    """Ask Claude to rewrite only the slides that break the rules (used for long decks)."""
+    for attempt in range(MAX_TRIES):
+        bad = per_slide_errors(spec)
+        if not bad:
+            return spec, session
+        set_job(jid, message=f"Tightening {len(bad)} slide(s) that break the style...")
+        listing = "\n".join(
+            f"Slide {i + 1}: {json.dumps(spec['slides'][i], ensure_ascii=False)}\n  problems: " + "; ".join(e)
+            for i, e in list(bad.items())[:60])
+        text, session = run_claude(
+            "These content slides break the style rules. Rewrite each one, keeping its heading and meaning;"
+            " shorten lines (never split them).\n" + listing +
+            '\nReply with ONLY JSON: {"slides": {"<slide number>": ' + SLIDE_SCHEMA + "}}",
+            folder, session)
+        for k, s in extract_spec(text).get("slides", {}).items():
+            idx = int(k) - 1
+            if 0 <= idx < len(spec["slides"]) and isinstance(s, dict):
+                spec["slides"][idx] = s
+    bad = per_slide_errors(spec)
+    if bad:
+        first = next(iter(bad.items()))
+        raise RuntimeError(f"{len(bad)} slide(s) still break the style, e.g. slide {first[0] + 1}: {first[1][0]}")
+    return spec, session
+
+
+def write_big(jid, job, folder):
+    """Long decks: plan every heading first, then write the slides in batches."""
+    total = job["limits"][0]
+    k = total - 2 - (1 if job["agenda"] else 0)
+    set_job(jid, message=f"Planning {k} slide headings...")
+    plan = first_prompt(job).replace(
+        "Reply with ONLY the JSON spec in a ```json block, nothing else. Schema:",
+        "First, plan the deck only. Reply with ONLY JSON in a ```json block, nothing else. Schema:")
+    plan = plan.replace(
+        '{"title": str, "date": str, "agenda": bool, "slides": [{"heading": str, "lines": [str]}'
+        ' or {"heading": str, "left": [str], "right": [str]}]}',
+        '{"title": str, "date": str, "agenda": bool, "headings": [str]}  '
+        f"- exactly {k} distinct headings, in presentation order, at most 5 words each.")
+    text, session = run_claude(plan, folder, None, CLAUDE_TIMEOUT + 2 * k)
+    outline = extract_spec(text)
+    heads = [h for h in outline.get("headings", []) if str(h).strip()]
+    if len(heads) != k:
+        text, session = run_claude(
+            f"You gave {len(heads)} headings; I need exactly {k}. Reply with the corrected JSON plan only.",
+            folder, session, CLAUDE_TIMEOUT + 2 * k)
+        outline = extract_spec(text)
+        heads = [h for h in outline.get("headings", []) if str(h).strip()]
+    if len(heads) < k:
+        raise RuntimeError(f"Could only plan {len(heads)} of {k} slides. Try a broader topic or fewer slides.")
+    heads = heads[:k]
+
+    slides = []
+    for start in range(0, k, BATCH):
+        part = heads[start:start + BATCH]
+        set_job(jid, message=f"Writing slides {start + 1}-{start + len(part)} of {k}...")
+        ask = ("Now write the content slides for these headings, in this order, using the headings exactly:\n" +
+               "\n".join(f"{start + i + 1}. {h}" for i, h in enumerate(part)) +
+               f"\nReply with ONLY JSON: {{\"slides\": [{SLIDE_SCHEMA}, ...]}} - exactly {len(part)} slides.")
+        got = []
+        for _ in range(2):
+            text, session = run_claude(ask, folder, session)
+            got = [s for s in extract_spec(text).get("slides", []) if isinstance(s, dict)]
+            if len(got) >= len(part):
+                break
+            ask = f"That had {len(got)} slides; I need exactly {len(part)}. " + ask
+        if len(got) < len(part):
+            raise RuntimeError(f"SLIDIFY stopped early while writing slides {start + 1}-{start + len(part)}.")
+        for h, s in zip(part, got):
+            s["heading"] = h
+            slides.append(s)
+
+    spec = {"title": outline.get("title") or "Presentation", "date": outline.get("date") or job["date"],
+            "agenda": bool(job["agenda"]), "slides": slides}
+    return spec, session
+
+
+def apply_edits(spec, edits):
+    """Apply {"op": replace|delete|insert_after, "n": slide number, ...} edits (1-based content numbers)."""
+    slides = spec["slides"]
+    for e in sorted(edits, key=lambda e: int(e.get("n", 0)), reverse=True):
+        n, op = int(e.get("n", 0)), e.get("op")
+        if op == "replace" and 1 <= n <= len(slides) and isinstance(e.get("slide"), dict):
+            slides[n - 1] = e["slide"]
+        elif op == "delete" and 1 <= n <= len(slides):
+            del slides[n - 1]
+        elif op == "insert_after" and 0 <= n <= len(slides):
+            new = [s for s in e.get("slides", []) if isinstance(s, dict)]
+            slides[n:n] = new
+    return spec
+
+
+def revise_big(jid, job, folder, feedback):
+    """Long decks: Claude reads the current deck from a file and replies with edits only."""
+    current = folder / "current.json"
+    current.write_text(json.dumps(job["spec"], indent=1, ensure_ascii=False), encoding="utf-8")
+    text, session = run_claude(
+        f"The current deck is in {current} (read it with the Read tool; 'slides' are numbered from 1)."
+        f"\nChange it as the owner asks, keeping every style rule:\n{feedback}\n"
+        "Reply with ONLY JSON listing the edits, nothing else:\n"
+        '{"title": str (optional, only if it changes), "agenda": bool (optional), "edits": ['
+        '{"op": "replace", "n": int, "slide": ' + SLIDE_SCHEMA + '}, {"op": "delete", "n": int}, '
+        '{"op": "insert_after", "n": int (0 = at the start), "slides": [' + SLIDE_SCHEMA + "]}]}"
+        "\nNumbers refer to the current deck before any edit.",
+        folder, job.get("session"), CLAUDE_TIMEOUT * 2)
+    reply = extract_spec(text)
+    spec = json.loads(json.dumps(job["spec"]))
+    spec = apply_edits(spec, reply.get("edits", []))
+    if reply.get("title"):
+        spec["title"] = reply["title"]
+    if "agenda" in reply:
+        spec["agenda"] = bool(reply["agenda"])
+    if spec.get("agenda") and len(spec["slides"]) > bd.MAX_AGENDA:
+        spec["agenda"] = False
+    return spec, session
+
+
+def make_deck(jid, prompt, session=None, limits=(1, bd.MAX_SLIDES), feedback=None):
     job = jobs[jid]
     folder = JOBS / jid
     set_job(jid, status="working", message="SLIDIFY is reading and writing your slides...")
-    text, session = run_claude(prompt, folder, session)
-    spec = extract_spec(text)
-    for attempt in range(1, MAX_TRIES + 1):
-        spec.pop("closing", None)
-        errors = bd.validate(spec, *limits)
-        if not errors:
-            break
-        if attempt == MAX_TRIES:
-            raise RuntimeError("Some lines still break the style: " + "; ".join(errors[:4]))
-        set_job(jid, message=f"Tightening {len(errors)} line(s) that break the style...")
-        fix = ("The builder rejected the deck:\n" + "\n".join("- " + e for e in errors) +
-               "\nShorten those lines (never split them) and reply with the full corrected JSON spec only.")
-        text, session = run_claude(fix, folder, session)
-        spec = extract_spec(text)
+    wait = CLAUDE_TIMEOUT + 12 * min(limits[1], 300)   # more slides, more time
+    big_new = feedback is None and limits[0] == limits[1] and limits[0] > BIG
+    big_edit = feedback is not None and len(job.get("spec", {}).get("slides", [])) > BIG
 
-    set_job(jid, message="Building PowerPoint, PDF, pictures & Word...")
+    if big_new or big_edit:
+        spec, session = (write_big(jid, job, folder) if big_new
+                         else revise_big(jid, job, folder, feedback))
+        spec, session = fix_slides(jid, spec, session, folder)
+        errors = deck_errors(spec, limits)
+        if errors:
+            raise RuntimeError("; ".join(errors))
+    else:
+        text, session = run_claude(prompt, folder, session, wait)
+        spec = extract_spec(text)
+        for attempt in range(1, MAX_TRIES + 1):
+            spec.pop("closing", None)
+            errors = bd.validate(spec, *limits)
+            if not errors:
+                break
+            if attempt == MAX_TRIES:
+                raise RuntimeError("Some lines still break the style: " + "; ".join(errors[:4]))
+            set_job(jid, message=f"Tightening {len(errors)} line(s) that break the style...")
+            fix = ("The builder rejected the deck:\n" + "\n".join("- " + e for e in errors) +
+                   "\nShorten those lines (never split them) and reply with the full corrected JSON spec only.")
+            text, session = run_claude(fix, folder, session, wait)
+            spec = extract_spec(text)
+
+    spec.pop("closing", None)
+    set_job(jid, message=f"Building PowerPoint, PDF, pictures & Word ({bd.slide_count(spec)} slides)...")
     version = job.get("version", 0) + 1
     out_dir = folder / f"v{version}"
     stem = safe_name(bd.clean(spec["title"]))
@@ -197,9 +347,9 @@ def make_deck(jid, prompt, session=None, limits=(1, bd.MAX_SLIDES)):
             downloads={k: base + out[k].name for k in ("pptx", "pdf", "zip", "docx")})
 
 
-def worker(jid, prompt, session=None, limits=(1, bd.MAX_SLIDES)):
+def worker(jid, prompt, session=None, limits=(1, bd.MAX_SLIDES), feedback=None):
     try:
-        make_deck(jid, prompt, session, limits)
+        make_deck(jid, prompt, session, limits, feedback)
     except subprocess.TimeoutExpired:
         set_job(jid, status="error", message="SLIDIFY took too long. Try a shorter brief or fewer files.")
     except Exception as e:  # noqa: BLE001
@@ -263,11 +413,12 @@ def revise(jid):
         return jsonify(error="Say what to change."), 400
     prompt = ("Change the deck as the owner asks, keeping every style rule:\n" + feedback +
               f"\n\nKeep the slide count rule ({count_rule(job)}) unless the owner asks for a different number"
-              " (3 to 40 slides allowed)."
+              f" (3 to {MAX_CUSTOM} slides allowed)."
               "\n\nCurrent deck:\n```json\n" + json.dumps(job.get("spec", {}), ensure_ascii=False) +
               "\n```\nReply with the full updated JSON spec only.")
     set_job(jid, status="working", message="Applying your changes...")
-    threading.Thread(target=worker, args=(jid, prompt, job.get("session"), (3, 40)), daemon=True).start()
+    threading.Thread(target=worker, args=(jid, prompt, job.get("session"), (3, MAX_CUSTOM), feedback),
+                     daemon=True).start()
     return jsonify(id=jid)
 
 

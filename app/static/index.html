@@ -169,8 +169,8 @@
       <select id="fewerN"></select>
     </div>
     <div id="customBox" hidden>
-      <label class="title" for="customN">How many slides (3 to 40)</label>
-      <input type="number" id="customN" min="3" max="40" value="25" inputmode="numeric">
+      <label class="title" for="customN">How many slides (3 to 99)</label>
+      <input type="number" id="customN" min="3" max="99" value="25" inputmode="numeric">
     </div>
     <p class="hint" id="countHint">Title, Sequence and THANK YOU slides are included in the count.</p>
 
@@ -232,7 +232,7 @@ function countChoice() {
   const mode = $("slidesMode").value;
   let n = 12;
   if (mode === "fewer") n = +$("fewerN").value;
-  if (mode === "custom") n = Math.max(3, Math.min(40, parseInt($("customN").value, 10) || 12));
+  if (mode === "custom") n = Math.max(3, Math.min(99, parseInt($("customN").value, 10) || 12));
   return { mode, n };
 }
 function syncCount() {
@@ -241,9 +241,10 @@ function syncCount() {
   $("customBox").hidden = mode !== "custom";
   const total = mode === "long" ? 15 : n;
   const tooMany = $("agenda").checked && total - 3 > 14;
-  $("countHint").textContent = tooMany
+  $("countHint").textContent = (tooMany
     ? "Too many slides for one Sequence slide, so it will be left out."
-    : "Title, Sequence and THANK YOU slides are included in the count.";
+    : "Title, Sequence and THANK YOU slides are included in the count.")
+    + (total > 40 ? ` About ${Math.ceil(total / 40) * 2 + 2} minutes or more for ${total} slides.` : "");
 }
 ["slidesMode", "fewerN", "customN", "agenda"].forEach(id => $(id).addEventListener("input", syncCount));
 syncCount();
