@@ -1,0 +1,16 @@
+{
+  "title": "Remote Work in 2027",
+  "subtitle": "What changes, what stays",
+  "slides": [
+    {"heading": "Where we are", "bullets": ["Hybrid is now the default", "Offices used two days weekly", "Talent pools are global"]},
+    {"heading": "What works", "bullets": ["Focus time at home", "Fewer, shorter meetings", "Written decisions over calls"]},
+    {"heading": "What hurts", "bullets": ["Weaker onboarding for new hires", "Silent burnout", "Time-zone friction"]},
+    {"heading": "Tools that matter", "bullets": ["Shared docs as source of truth", "Async video updates", "One chat channel per project"]},
+    {"heading": "Managing teams", "bullets": ["Measure outcomes, not hours", "Weekly one-to-ones", "Clear response-time norms"]},
+    {"heading": "The office reimagined", "bullets": ["Space for collaboration only", "Bookable desks", "Smaller, better locations"]},
+    {"heading": "Culture at a distance", "bullets": ["Rituals over perks", "Quarterly in-person meetups", "Public praise, private feedback"]},
+    {"heading": "Risks ahead", "bullets": ["Security across home networks", "Uneven promotion chances", "Isolation for junior staff"]},
+    {"heading": "Next steps", "bullets": ["Audit meeting load", "Write a team charter", "Pilot one async week"]}
+  ],
+  "closing": "Thank you"
+}
