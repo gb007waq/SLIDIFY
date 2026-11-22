@@ -161,7 +161,8 @@ def first_prompt(job):
         lines += ["", "What the deck is about / instructions from the owner:", job["brief"]]
         if job.get("spoken"):
             lines += ["(This was spoken and transcribed by speech recognition: ignore filler words,",
-                      "fix obvious recognition mistakes, and write the slides in English unless asked otherwise.)"]
+                      "fix obvious recognition mistakes. It may be in any language, e.g. Urdu or Pashto:",
+                      "understand it, but always write the slides in English.)"]
     if job["sources"]:
         lines += ["", "Source material - read every file with the Read tool, then build the deck from it:"]
         lines += [f"- {p}" for p in job["sources"]]

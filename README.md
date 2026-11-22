@@ -41,7 +41,7 @@ Decks are saved to `Documents\Slidify` unless you name another folder.
 A web page on your computer for making decks without typing in Claude Code.
 
 - **Put in:** a topic or notes (typed or spoken), plus Word (.docx), PDF, pictures or text files
-- **Speak:** press Speak, say what the presentation is about in English or Urdu, press Stop. It makes the slides (needs Chrome or Edge)
+- **Speak:** press Speak, say what the presentation is about in any of 55 languages (English, Urdu, Pashto, Punjabi, Sindhi, Persian, Arabic and more), press Stop. It makes the slides in English (needs Chrome or Edge)
 - **Slides:** 12 (standard), fewer than 12, 15 to 20, or any custom number up to 99 (long presentations are planned first, then written 40 slides at a time)
 - **Get out:** PowerPoint, PDF, slide pictures (.zip) and Word, with a preview of every slide
 - **Change something:** type what to change ("merge slides 4 & 5") and it rebuilds the deck
