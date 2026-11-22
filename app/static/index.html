@@ -80,6 +80,12 @@
   @keyframes spin { to { transform: rotate(360deg); } }
 
   .downloads { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 22px; }
+  .downloads .new { margin-left: auto; color: var(--grey-3); }
+  .toast { display: flex; align-items: center; gap: 14px; background: var(--grey-1); color: #fff; border-radius: 6px;
+           padding: 10px 14px; margin-bottom: 18px; font-size: 15px; max-width: 760px; }
+  .toast button { margin-left: auto; background: none; border: 1px solid rgba(255,255,255,.5); color: #fff;
+                  border-radius: 4px; padding: 5px 12px; cursor: pointer; font-size: 14px; }
+  .toast button:hover { background: rgba(255,255,255,.12); }
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
   .thumb { position: relative; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; cursor: zoom-in; background: #fff; padding: 0; }
   .thumb img { display: block; width: 100%; aspect-ratio: 16/9; object-fit: cover; }
@@ -195,6 +201,11 @@
       <a class="btn ghost" data-kind="pdf">PDF</a>
       <a class="btn ghost" data-kind="zip">Pictures (.zip)</a>
       <a class="btn ghost" data-kind="docx">Word</a>
+      <button class="btn ghost new" id="newBtn" type="button">+ New presentation</button>
+    </div>
+    <div class="toast" id="toast" role="status" hidden>
+      <span id="toastText"></span>
+      <button type="button" id="keepBtn">Keep it</button>
     </div>
 
     <div class="grid" id="grid"></div>
@@ -411,6 +422,39 @@ function busy(on, text) {
   $("apply").disabled = on;
 }
 
+// Start fresh: clear the last presentation and the form, keep your settings.
+let clearTimer = null, countdown = null;
+function resetAll() {
+  clearTimeout(clearTimer); clearInterval(countdown); clearTimeout(timer);
+  jobId = null; slides = []; picked = []; spoken = false;
+  $("toast").hidden = true;
+  $("grid").innerHTML = "";
+  $("downloads").hidden = true;
+  $("revise").hidden = true;
+  $("empty").hidden = false;
+  $("deckTitle").textContent = "Preview";
+  busy(false, "");
+  ["brief", "feedback"].forEach(id => $(id).value = "");
+  ["error", "micNote", "interim"].forEach(id => $(id).textContent = "");
+  $("said").hidden = true;
+  renderChips();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+  $("brief").focus({ preventScroll: true });
+}
+$("newBtn").onclick = resetAll;
+$("keepBtn").onclick = () => { clearTimeout(clearTimer); clearInterval(countdown); $("toast").hidden = true; };
+
+// After a download, clear the page in a few seconds (Keep it stops that).
+document.querySelectorAll("#downloads a").forEach(a => a.addEventListener("click", () => {
+  clearTimeout(clearTimer); clearInterval(countdown);
+  let left = 6;
+  const say = () => $("toastText").textContent = `Downloading. Clearing for a new presentation in ${left}s...`;
+  say();
+  $("toast").hidden = false;
+  countdown = setInterval(() => { left--; if (left > 0) say(); }, 1000);
+  clearTimer = setTimeout(resetAll, left * 1000);
+}));
+
 function show(job) {
   if (job.title) $("deckTitle").textContent = job.title;
   if (job.slides && job.slides.length) {
@@ -453,6 +497,7 @@ async function poll() {
 $("form").onsubmit = async (e) => {
   e.preventDefault();
   if (listening) { submitAfterStop = true; listening = false; rec.stop(); return; }  // onend submits
+  clearTimeout(clearTimer); clearInterval(countdown); $("toast").hidden = true;
   $("error").textContent = "";
   const fd = new FormData();
   fd.append("brief", $("brief").value);
