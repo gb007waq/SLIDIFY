@@ -1,16 +1,52 @@
 {
-  "title": "Remote Work in 2027",
-  "subtitle": "What changes, what stays",
+  "title": "Artificial Intelligence",
+  "date": "NOV, 2026",
+  "agenda": true,
   "slides": [
-    {"heading": "Where we are", "bullets": ["Hybrid is now the default", "Offices used two days weekly", "Talent pools are global"]},
-    {"heading": "What works", "bullets": ["Focus time at home", "Fewer, shorter meetings", "Written decisions over calls"]},
-    {"heading": "What hurts", "bullets": ["Weaker onboarding for new hires", "Silent burnout", "Time-zone friction"]},
-    {"heading": "Tools that matter", "bullets": ["Shared docs as source of truth", "Async video updates", "One chat channel per project"]},
-    {"heading": "Managing teams", "bullets": ["Measure outcomes, not hours", "Weekly one-to-ones", "Clear response-time norms"]},
-    {"heading": "The office reimagined", "bullets": ["Space for collaboration only", "Bookable desks", "Smaller, better locations"]},
-    {"heading": "Culture at a distance", "bullets": ["Rituals over perks", "Quarterly in-person meetups", "Public praise, private feedback"]},
-    {"heading": "Risks ahead", "bullets": ["Security across home networks", "Uneven promotion chances", "Isolation for junior staff"]},
-    {"heading": "Next steps", "bullets": ["Audit meeting load", "Write a team charter", "Pilot one async week"]}
-  ],
-  "closing": "Thank you"
+    {"heading": "What is AI", "lines": [
+      "Machines doing tasks that need human intelligence",
+      "Learns patterns from data, not fixed rules",
+      "Predicts | Classifies | Generates | Decides"
+    ]},
+    {"heading": "Brief History", "lines": [
+      "1956 | Field named at Dartmouth",
+      "1997 | Deep Blue beats Kasparov",
+      "2012 | Deep learning breakthrough",
+      "2022 | Generative AI goes mainstream"
+    ]},
+    {"heading": "How AI Learns", "lines": [
+      "Supervised | Learns from labelled examples",
+      "Unsupervised | Finds hidden structure in data",
+      "Reinforcement | Learns by trial & reward"
+    ]},
+    {"heading": "AI Today", "left": [
+      "Search | Maps",
+      "Voice Assistants",
+      "Translation",
+      "Fraud Detection"
+    ], "right": [
+      "Healthcare Diagnosis",
+      "Coding Assistants",
+      "Predictive Maintenance",
+      "Customer Service Agents"
+    ]},
+    {"heading": "Benefits", "lines": [
+      "Automates repetitive work",
+      "Speeds research & discovery",
+      "Personalises public & private services",
+      "Scales scarce expertise to more people"
+    ]},
+    {"heading": "Risks", "lines": [
+      "Bias inherited from training data",
+      "Confident but wrong outputs",
+      "Privacy & security concerns",
+      "Job disruption in some roles"
+    ]},
+    {"heading": "Responsible AI", "lines": [
+      "Transparency in how systems decide",
+      "Human oversight on key decisions",
+      "Testing for safety & fairness",
+      "Clear rules | Clear accountability"
+    ]}
+  ]
 }

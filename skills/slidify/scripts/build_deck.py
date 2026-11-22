@@ -1,20 +1,27 @@
 """Slidify deck builder.
 
-Builds a .pptx in the Slidify signature style from a JSON spec, and refuses
-any spec that breaks the style rules.
+Builds a .pptx in the Slidify signature style (see ../STYLE.md) from a JSON
+spec, and refuses any spec that breaks the style rules.
 
 Usage:
     python build_deck.py spec.json [output.pptx]
 
 Spec format:
 {
-  "title": "Deck title",                      # title slide heading
-  "subtitle": "Optional one-liner",           # optional
+  "title": "Deck title",
+  "date": "NOV, 2026",                       # optional, shown under the title
+  "agenda": true,                            # optional "Sequence" slide
   "slides": [
-    {"heading": "Slide heading", "bullets": ["One line", "Another line"]}
+    {"heading": "Heading", "lines": ["One-liner", "Item | Paired item"]},
+    {"heading": "Heading", "left": ["..."], "right": ["..."]}
   ],
-  "closing": "Thank you"                      # optional closing slide line
+  "closing": "THANK YOU"                     # optional; default THANK YOU, "" to omit
 }
+
+Optional logos: put PNG files in the skill's assets/ folder:
+    logo_title.png   centred on the title slide
+    logo_top.png     top-right of every content slide
+    logo_corner.png  bottom-right of every content slide
 """
 
 import json
@@ -25,7 +32,7 @@ from pathlib import Path
 from pptx import Presentation
 from pptx.dml.color import RGBColor
 from pptx.enum.shapes import MSO_CONNECTOR
-from pptx.enum.text import MSO_ANCHOR, MSO_AUTO_SIZE
+from pptx.enum.text import MSO_ANCHOR, MSO_AUTO_SIZE, PP_ALIGN
 from pptx.oxml.ns import qn
 from pptx.util import Emu, Inches, Pt
 
@@ -34,21 +41,28 @@ FONT = "Nirmala Text"
 HEADING_PT = 22
 BODY_PT = 18
 
-GREY_DARK = RGBColor(0x33, 0x33, 0x33)   # headings, title-slide background
-GREY_MID = RGBColor(0x59, 0x59, 0x59)    # body text
-GREY_LIGHT = RGBColor(0xA6, 0xA6, 0xA6)  # bullet markers, rules, subtitles
-GREY_PALE = RGBColor(0xF2, 0xF2, 0xF2)   # content-slide background
+WHITE = RGBColor(0xFF, 0xFF, 0xFF)       # background
+GREY_HEADING = RGBColor(0xA6, 0xA6, 0xA6)  # slide headings, date
+GREY_CLOSING = RGBColor(0x80, 0x80, 0x80)  # title and THANK YOU
+BLACK = RGBColor(0x00, 0x00, 0x00)       # body lines, column divider
 
-MAX_SLIDES = 12          # whole deck, title and closing slides included
-MAX_BULLETS = 5          # per slide
-MAX_BULLET_WORDS = 8
-MAX_HEADING_WORDS = 6
+MAX_SLIDES = 12
+MAX_LINES = 7            # per slide (per column on two-column slides)
+MAX_LINE_WORDS = 12
+MAX_HEADING_WORDS = 5
 
 SLIDE_W, SLIDE_H = Inches(13.333), Inches(7.5)
-MARGIN = Inches(0.9)
-TEXT_W = SLIDE_W - 2 * MARGIN
-BULLET_INDENT = Inches(0.35)
-INSET = Inches(0.1)
+LEFT = Inches(0.7)
+TEXT_W = SLIDE_W - LEFT - Inches(1.6)    # keep clear of the right-hand logos
+INSET = Inches(0.05)
+COL_LEFT_X = Inches(1.8)
+COL_W = Inches(4.6)
+DIVIDER_X = Inches(6.6)
+COL_RIGHT_X = Inches(7.1)
+LINE_GAP_PT = 32                         # space between one-liners
+
+SKILL_DIR = Path(__file__).resolve().parent.parent
+ASSETS = SKILL_DIR / "assets"
 
 FONT_FILE = Path(r"C:\Windows\Fonts\Nirmala.ttc")
 FONT_INDEX = 3  # "Nirmala Text Regular" inside Nirmala.ttc
@@ -56,7 +70,6 @@ FONT_INDEX = 3  # "Nirmala Text Regular" inside Nirmala.ttc
 
 # ---- Line-fit measurement --------------------------------------------------
 def _make_measurer():
-    """Return f(text, pt) -> width in points, or None if Pillow/font missing."""
     try:
         from PIL import ImageFont
     except ImportError:
@@ -67,7 +80,6 @@ def _make_measurer():
 
     def measure(text, pt):
         if pt not in cache:
-            # Size in "pixels" == points when we treat 1px as 1pt.
             cache[pt] = ImageFont.truetype(str(FONT_FILE), pt * 10, index=FONT_INDEX)
         return cache[pt].getlength(text) / 10
 
@@ -77,90 +89,91 @@ def _make_measurer():
 MEASURE = _make_measurer()
 
 
-def emu_to_pt(v):
-    return Emu(v).pt
-
-
 def fits_one_line(text, pt, box_width_emu):
-    avail = emu_to_pt(box_width_emu) * 0.95  # 5% safety margin
+    avail = Emu(box_width_emu - 2 * INSET).pt * 0.95
     if MEASURE:
         return MEASURE(text, pt) <= avail
-    # Fallback: average glyph is ~0.55 em wide.
     return len(text) * pt * 0.55 <= avail
 
 
 # ---- Validation ------------------------------------------------------------
-def words(text):
-    return len(text.split())
-
-
 def clean(text):
     text = re.sub(r"\s+", " ", str(text)).strip()
-    return text.rstrip(".")  # one-liners carry no full stop
+    text = re.sub(r"\s*\|\s*", " | ", text)   # tidy pipe pairs
+    return text.rstrip(".")                   # one-liners carry no full stop
+
+
+def slide_count(spec):
+    return (1 + (1 if spec.get("agenda") else 0) + len(spec.get("slides", []))
+            + (1 if spec.get("closing", "THANK YOU") else 0))
 
 
 def validate(spec):
     errors = []
     slides = spec.get("slides", [])
-    total = 1 + len(slides) + (1 if spec.get("closing") else 0)
+    total = slide_count(spec)
     if total > MAX_SLIDES:
         errors.append(f"Deck has {total} slides; the maximum is {MAX_SLIDES}.")
     if not spec.get("title"):
         errors.append("Missing deck title.")
+    if spec.get("agenda") and len(slides) > MAX_LINES:
+        errors.append(f"Agenda would list {len(slides)} headings (max {MAX_LINES}); drop the agenda or merge slides.")
 
-    def check_line(label, text, limit, pt, width):
+    def check(label, text, limit, pt, width):
         if "\n" in str(text):
             errors.append(f"{label}: contains a line break: {text!r}")
         t = clean(text)
-        if words(t) > limit:
-            errors.append(f"{label}: {words(t)} words (max {limit}): {t!r}")
+        if not t:
+            errors.append(f"{label}: empty.")
+        if len(t.split()) > limit:
+            errors.append(f"{label}: {len(t.split())} words (max {limit}): {t!r}")
         if not fits_one_line(t, pt, width):
-            errors.append(f"{label}: too long to fit on one line: {t!r}")
+            errors.append(f"{label}: too long for one line: {t!r}")
 
-    check_line("Title", spec.get("title", ""), MAX_HEADING_WORDS, HEADING_PT, TEXT_W - 2 * INSET)
-    if spec.get("subtitle"):
-        check_line("Subtitle", spec["subtitle"], MAX_BULLET_WORDS, BODY_PT, TEXT_W - 2 * INSET)
-    if spec.get("closing"):
-        check_line("Closing", spec["closing"], MAX_HEADING_WORDS, HEADING_PT, TEXT_W - 2 * INSET)
+    check("Title", spec.get("title", ""), 8, HEADING_PT, SLIDE_W - 2 * LEFT)
 
-    for i, s in enumerate(slides, start=2):
-        check_line(f"Slide {i} heading", s.get("heading", ""), MAX_HEADING_WORDS, HEADING_PT, TEXT_W - 2 * INSET)
-        bullets = s.get("bullets", [])
-        if not bullets:
-            errors.append(f"Slide {i}: no bullets.")
-        if len(bullets) > MAX_BULLETS:
-            errors.append(f"Slide {i}: {len(bullets)} bullets (max {MAX_BULLETS}).")
-        for j, b in enumerate(bullets, start=1):
-            check_line(f"Slide {i} bullet {j}", b, MAX_BULLET_WORDS, BODY_PT,
-                       TEXT_W - 2 * INSET - BULLET_INDENT)
+    for i, s in enumerate(slides, start=2 + (1 if spec.get("agenda") else 0)):
+        check(f"Slide {i} heading", s.get("heading", ""), MAX_HEADING_WORDS, HEADING_PT, TEXT_W)
+        if "lines" in s:
+            cols = [("", s["lines"], TEXT_W)]
+        else:
+            cols = [("left ", s.get("left", []), COL_W), ("right ", s.get("right", []), COL_W)]
+        for name, lines, width in cols:
+            if not lines:
+                errors.append(f"Slide {i}: {name}column has no lines.")
+            if len(lines) > MAX_LINES:
+                errors.append(f"Slide {i}: {name}{len(lines)} lines (max {MAX_LINES}).")
+            for j, line in enumerate(lines, start=1):
+                check(f"Slide {i} {name}line {j}", line, MAX_LINE_WORDS, BODY_PT, width)
     return errors
 
 
 # ---- Rendering -------------------------------------------------------------
-def set_bg(slide, color):
+def white(slide):
     fill = slide.background.fill
     fill.solid()
-    fill.fore_color.rgb = color
+    fill.fore_color.rgb = WHITE
 
 
 def textbox(slide, left, top, width, height, anchor=MSO_ANCHOR.TOP):
-    tb = slide.shapes.add_textbox(left, top, width, height)
-    tf = tb.text_frame
+    tf = slide.shapes.add_textbox(left, top, width, height).text_frame
     tf.word_wrap = True
     tf.auto_size = MSO_AUTO_SIZE.NONE
     tf.vertical_anchor = anchor
     tf.margin_left = tf.margin_right = INSET
-    tf.margin_top = tf.margin_bottom = Inches(0.05)
+    tf.margin_top = tf.margin_bottom = Inches(0.03)
     return tf
 
 
-def style_run(run, pt, color, bold=False):
-    f = run.font
-    f.name = FONT
-    f.size = Pt(pt)
-    f.bold = bold
+def write(paragraph, text, pt, color, align=None):
+    if align is not None:
+        paragraph.alignment = align
+    r = paragraph.add_run()
+    r.text = text
+    f = r.font
+    f.name, f.size, f.bold = FONT, Pt(pt), False
     f.color.rgb = color
-    rPr = run._r.get_or_add_rPr()
+    rPr = r._r.get_or_add_rPr()
     for tag in ("a:ea", "a:cs"):
         el = rPr.find(qn(tag))
         if el is None:
@@ -169,73 +182,86 @@ def style_run(run, pt, color, bold=False):
         el.set("typeface", FONT)
 
 
-def add_bullet(paragraph):
-    pPr = paragraph._p.get_or_add_pPr()
-    pPr.set("marL", str(int(BULLET_INDENT)))
-    pPr.set("indent", str(-int(BULLET_INDENT)))
-    for child in list(pPr):
-        if child.tag in (qn("a:buNone"), qn("a:buChar"), qn("a:buClr"), qn("a:buFont")):
-            pPr.remove(child)
-    buClr = pPr.makeelement(qn("a:buClr"), {})
-    srgb = buClr.makeelement(qn("a:srgbClr"), {"val": str(GREY_LIGHT)})
-    buClr.append(srgb)
-    buFont = pPr.makeelement(qn("a:buFont"), {"typeface": "Arial"})
-    buChar = pPr.makeelement(qn("a:buChar"), {"char": "•"})
-    pPr.append(buClr)
-    pPr.append(buFont)
-    pPr.append(buChar)
+def picture(slide, name, left, top, height):
+    path = ASSETS / name
+    if path.exists():
+        slide.shapes.add_picture(str(path), left, top, height=height)
 
 
-def rule(slide, top, color=GREY_LIGHT, width=None):
-    line = slide.shapes.add_connector(
-        MSO_CONNECTOR.STRAIGHT, MARGIN + INSET, top, MARGIN + INSET + (width or Inches(1.2)), top)
-    line.line.color.rgb = color
-    line.line.width = Pt(1)
-
-
-def title_slide(prs, title, subtitle=None):
+def blank(prs):
     s = prs.slides.add_slide(prs.slide_layouts[6])
-    set_bg(s, GREY_DARK)
-    tf = textbox(s, MARGIN, Inches(2.9), TEXT_W, Inches(0.7), MSO_ANCHOR.BOTTOM)
-    style_run(tf.paragraphs[0].add_run(), HEADING_PT, GREY_PALE, bold=True)
-    tf.paragraphs[0].runs[0].text = clean(title)
-    rule(s, Inches(3.75))
-    if subtitle:
-        tf2 = textbox(s, MARGIN, Inches(3.95), TEXT_W, Inches(0.6))
-        r = tf2.paragraphs[0].add_run()
-        r.text = clean(subtitle)
-        style_run(r, BODY_PT, GREY_LIGHT)
+    white(s)
     return s
 
 
-def bullet_slide(prs, heading, bullets):
-    s = prs.slides.add_slide(prs.slide_layouts[6])
-    set_bg(s, GREY_PALE)
-    tf = textbox(s, MARGIN, Inches(0.6), TEXT_W, Inches(0.7), MSO_ANCHOR.BOTTOM)
-    r = tf.paragraphs[0].add_run()
-    r.text = clean(heading)
-    style_run(r, HEADING_PT, GREY_DARK, bold=True)
-    rule(s, Inches(1.45))
+def heading(slide, text):
+    tf = textbox(slide, LEFT, Inches(0.45), TEXT_W, Inches(0.7), MSO_ANCHOR.MIDDLE)
+    write(tf.paragraphs[0], clean(text), HEADING_PT, GREY_HEADING)
+    picture(slide, "logo_top.png", SLIDE_W - Inches(0.95), 0, Inches(1.0))
+    picture(slide, "logo_corner.png", SLIDE_W - Inches(1.65), SLIDE_H - Inches(0.85), Inches(0.55))
 
-    body = textbox(s, MARGIN, Inches(1.85), TEXT_W, Inches(5.0))
-    for k, b in enumerate(bullets):
-        p = body.paragraphs[0] if k == 0 else body.add_paragraph()
-        add_bullet(p)
-        p.space_after = Pt(BODY_PT * 0.9)
-        r = p.add_run()
-        r.text = clean(b)
-        style_run(r, BODY_PT, GREY_MID)
-    return s
+
+def lines_box(slide, left, top, width, lines):
+    tf = textbox(slide, left, top, width, SLIDE_H - top - Inches(0.6))
+    for k, line in enumerate(lines):
+        p = tf.paragraphs[0] if k == 0 else tf.add_paragraph()
+        p.space_after = Pt(LINE_GAP_PT)
+        write(p, clean(line), BODY_PT, BLACK)
+    return tf
+
+
+def title_slide(prs, title, date=None):
+    s = blank(prs)
+    logo = ASSETS / "logo_title.png"
+    if logo.exists():
+        pic = s.shapes.add_picture(str(logo), 0, Inches(2.2), height=Inches(1.6))
+        pic.left = int((SLIDE_W - pic.width) / 2)
+        top = Inches(4.1)
+    else:
+        top = Inches(3.3)
+    tf = textbox(s, LEFT, top, SLIDE_W - 2 * LEFT, Inches(0.8), MSO_ANCHOR.MIDDLE)
+    write(tf.paragraphs[0], clean(title), HEADING_PT, GREY_CLOSING, PP_ALIGN.CENTER)
+    if date:
+        tf = textbox(s, LEFT, Inches(6.3), SLIDE_W - 2 * LEFT, Inches(0.5), MSO_ANCHOR.MIDDLE)
+        write(tf.paragraphs[0], clean(date).upper(), BODY_PT, GREY_HEADING, PP_ALIGN.CENTER)
+
+
+def content_slide(prs, spec):
+    s = blank(prs)
+    heading(s, spec["heading"])
+    top = Inches(1.65)
+    if "lines" in spec:
+        lines_box(s, LEFT, top, TEXT_W, spec["lines"])
+    else:
+        lines_box(s, COL_LEFT_X, top, COL_W, spec["left"])
+        lines_box(s, COL_RIGHT_X, top, COL_W, spec["right"])
+        n = max(len(spec["left"]), len(spec["right"]))
+        pitch = Pt(BODY_PT * 1.2 + LINE_GAP_PT)
+        bottom = top + int(pitch * n)
+        d = s.shapes.add_connector(MSO_CONNECTOR.STRAIGHT, DIVIDER_X, top - Inches(0.1),
+                                   DIVIDER_X, bottom - Inches(0.2))
+        d.line.color.rgb = BLACK
+        d.line.width = Pt(1.25)
+
+
+def closing_slide(prs, text):
+    s = blank(prs)
+    tf = textbox(s, LEFT, Inches(3.3), SLIDE_W - 2 * LEFT, Inches(0.8), MSO_ANCHOR.MIDDLE)
+    write(tf.paragraphs[0], clean(text).upper(), HEADING_PT, GREY_CLOSING, PP_ALIGN.CENTER)
 
 
 def build(spec, out_path):
     prs = Presentation()
     prs.slide_width, prs.slide_height = SLIDE_W, SLIDE_H
-    title_slide(prs, spec["title"], spec.get("subtitle"))
+    title_slide(prs, spec["title"], spec.get("date"))
+    if spec.get("agenda"):
+        content_slide(prs, {"heading": "Sequence",
+                            "lines": [s["heading"] for s in spec["slides"]]})
     for s in spec.get("slides", []):
-        bullet_slide(prs, s["heading"], s["bullets"])
-    if spec.get("closing"):
-        title_slide(prs, spec["closing"])
+        content_slide(prs, s)
+    closing = spec.get("closing", "THANK YOU")
+    if closing:
+        closing_slide(prs, closing)
     prs.save(out_path)
 
 
@@ -255,8 +281,7 @@ def main():
         sys.exit(1)
 
     build(spec, out)
-    n = 1 + len(spec.get("slides", [])) + (1 if spec.get("closing") else 0)
-    print(f"OK: {n} slides -> {out.resolve()}")
+    print(f"OK: {slide_count(spec)} slides -> {out.resolve()}")
     if MEASURE is None:
         print("Note: Pillow or the Nirmala font file was not found; line fit was estimated.")
 

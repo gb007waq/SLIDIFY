@@ -1,52 +1,64 @@
 ---
 name: slidify
-description: Make a PowerPoint presentation in the owner's signature minimalist style (grey palette, Nirmala Text, one-line bullets, 12 slides max). Use whenever the user asks for a presentation, deck, slides or PPT, or says "slidify" something.
+description: Make a PowerPoint presentation in the owner's signature style (white slides, grey headings, plain black one-liners without bullet markers, Nirmala Text, 12 slides max), modelled on their reference deck. Use whenever the user asks for a presentation, deck, slides or PPT, or says "slidify" something.
 ---
 
 # Slidify
 
-Turn any topic, notes, document or brief into a `.pptx` in one fixed signature style.
-The builder script enforces the style; your job is the content.
+Turn any topic, notes or document into a `.pptx` in the owner's signature style.
+The builder script enforces the look; your job is the content and its wording.
 
-## The style (non-negotiable)
+## Before writing anything
 
-- **Palette:** greys only - `#333333`, `#595959`, `#A6A6A6`, `#F2F2F2`. No other colours, no images, no icons.
-- **Font:** Nirmala Text everywhere. Headings 22 pt, body 18 pt. No other sizes.
-- **Bullets:** every point is one line, a short one-liner of **8 words or fewer**. Never two lines.
-- **Headings:** 6 words or fewer.
-- **Per slide:** 3-5 bullets.
-- **Length:** 12 slides maximum in total (title and closing slides count). Aim for 10-12 for a full talk; use fewer for small topics.
-- **Wording:** minimum words. Cut articles, filler and hedging. No full stops at line ends. No sub-bullets.
+Read [STYLE.md](STYLE.md). It is the full style guide, taken from the owner's reference deck in `reference/`.
+If you can read PDFs, look at `reference/CMPO Gov.pdf` too: match its tone, line length and slide types.
+
+## The rules in short
+
+- White background. Grey headings (22 pt). Black body lines (18 pt). Nirmala Text. Nothing else.
+- **No bullet markers.** Each point is a plain one-liner with space around it.
+- One line per point, 12 words at most (aim for 4-8). Never two lines.
+- Pair related items with ` | `, and use `&` for "and". No full stops.
+- 3-7 lines per slide. Use two columns for lists of short items.
+- First slide is the title (with date), then optionally a "Sequence" agenda. Last slide is THANK YOU.
+- 12 slides at most in total.
 
 ## Workflow
 
-1. **Understand the ask.** Topic, audience and any source material. If the user gave none of these and the topic is too vague to outline, ask one short question; otherwise just proceed.
-2. **Outline.** Title slide, then up to 10 content slides, then an optional closing slide. Each content slide makes one point.
-3. **Write tight.** Draft each bullet, then shorten it. Prefer nouns and verbs: "Revenue up 20% in Q3", not "We saw that revenue increased by about 20% during Q3."
-4. **Write the spec** as JSON (UTF-8) next to where the deck should go:
+1. **Understand the ask:** topic, audience and any source material. Ask one short question only if the topic is too vague to outline.
+2. **Outline:** one point per slide, headings of 1-4 words.
+3. **Write in the owner's voice:** direct statements, compact figures and dates, no filler. Cut every word that can go.
+4. **Write the spec** as UTF-8 JSON:
 
    ```json
    {
      "title": "Deck title",
-     "subtitle": "Optional one-liner",
+     "date": "NOV, 2026",
+     "agenda": true,
      "slides": [
-       {"heading": "Slide heading", "bullets": ["One line", "Another line"]}
-     ],
-     "closing": "Thank you"
+       {"heading": "Functions", "lines": ["Act as Secretariat to CM Policy Initiatives", "Work as Think-Tank for CM KP"]},
+       {"heading": "Work Ethic", "left": ["High Value", "Low Cost | Low HR"], "right": ["Driven by Creativity", "Do More with Less"]}
+     ]
    }
    ```
 
-5. **Build** with the script in this skill's folder:
+   `closing` defaults to THANK YOU. Use today's month and year for `date` unless told otherwise.
+
+5. **Build** with the script in this skill's folder (normally `~/.claude/skills/slidify`):
 
    ```
-   python "<this skill's folder>/scripts/build_deck.py" spec.json output.pptx
+   python "<skill folder>/scripts/build_deck.py" spec.json "Deck Title.pptx"
    ```
 
-   The skill folder is normally `~/.claude/skills/slidify`. Needs `python-pptx` (`pip install python-pptx`); Pillow gives exact line-fit checks.
+   It needs `python-pptx`; Pillow gives exact line-fit checks.
 
-6. **If the style check fails**, rewrite the flagged lines shorter (never split them into two lines) and run again until it prints `OK`.
-7. **Report** the path to the `.pptx` and list the slide headings in one short list.
+6. **If the style check fails,** shorten the flagged lines (never split them) and build again until it prints `OK`.
+7. **Report** the `.pptx` path and list the slide headings.
+
+## Logos
+
+PNGs placed in `assets/` are added automatically: `logo_title.png` on the title slide, and `logo_top.png` and `logo_corner.png` at the top right and bottom right of content slides. Add them only when the owner asks for logos on the deck.
 
 ## Where to save
 
-Save to the folder the user names. If none is named, use their current project folder, or `~/Documents/Slidify` if there is none. Name the file after the deck title.
+Save to the folder the user names. Otherwise use `~/Documents/Slidify`. Name the file after the deck title.
