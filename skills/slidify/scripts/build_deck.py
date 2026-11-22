@@ -38,8 +38,11 @@ from pptx.util import Emu, Inches, Pt
 
 # ---- Signature style -------------------------------------------------------
 FONT = "Nirmala Text"
-HEADING_PT = 22
-BODY_PT = 18
+TITLE_PT = 36               # title slide and THANK YOU
+HEADING_SIZES = (24, 22)    # slide headings: 24, or 22 if 24 won't fit on one line
+BODY_SIZES = (20, 18)       # body lines: 20, or 18 for the whole slide if needed
+HEADING_PT = HEADING_SIZES[-1]
+BODY_PT = BODY_SIZES[-1]
 
 WHITE = RGBColor(0xFF, 0xFF, 0xFF)       # background
 GREY_HEADING = RGBColor(0xA6, 0xA6, 0xA6)  # slide headings, date
@@ -55,10 +58,10 @@ SLIDE_W, SLIDE_H = Inches(13.333), Inches(7.5)
 LEFT = Inches(0.7)
 TEXT_W = SLIDE_W - LEFT - Inches(1.6)    # keep clear of the right-hand logos
 INSET = Inches(0.05)
-COL_LEFT_X = Inches(1.8)
-COL_W = Inches(4.6)
-DIVIDER_X = Inches(6.6)
-COL_RIGHT_X = Inches(7.1)
+COL_LEFT_X = Inches(1.0)
+COL_W = Inches(5.3)
+DIVIDER_X = Inches(6.55)
+COL_RIGHT_X = Inches(6.95)
 LINE_GAP_PT = 32                         # space between one-liners
 
 SKILL_DIR = Path(__file__).resolve().parent.parent
@@ -130,7 +133,7 @@ def validate(spec):
         if not fits_one_line(t, pt, width):
             errors.append(f"{label}: too long for one line: {t!r}")
 
-    check("Title", spec.get("title", ""), 8, HEADING_PT, SLIDE_W - 2 * LEFT)
+    check("Title", spec.get("title", ""), 8, TITLE_PT, SLIDE_W - 2 * LEFT)
 
     for i, s in enumerate(slides, start=2 + (1 if spec.get("agenda") else 0)):
         check(f"Slide {i} heading", s.get("heading", ""), MAX_HEADING_WORDS, HEADING_PT, TEXT_W)
@@ -194,19 +197,28 @@ def blank(prs):
     return s
 
 
+def pick_size(sizes, texts, width):
+    """Largest allowed size at which every text fits on one line."""
+    for pt in sizes:
+        if all(fits_one_line(clean(t), pt, width) for t in texts):
+            return pt
+    return sizes[-1]
+
+
 def heading(slide, text):
     tf = textbox(slide, LEFT, Inches(0.45), TEXT_W, Inches(0.7), MSO_ANCHOR.MIDDLE)
-    write(tf.paragraphs[0], clean(text), HEADING_PT, GREY_HEADING)
+    pt = pick_size(HEADING_SIZES, [text], TEXT_W)
+    write(tf.paragraphs[0], clean(text), pt, GREY_HEADING)
     picture(slide, "logo_top.png", SLIDE_W - Inches(0.95), 0, Inches(1.0))
     picture(slide, "logo_corner.png", SLIDE_W - Inches(1.65), SLIDE_H - Inches(0.85), Inches(0.55))
 
 
-def lines_box(slide, left, top, width, lines):
+def lines_box(slide, left, top, width, lines, pt):
     tf = textbox(slide, left, top, width, SLIDE_H - top - Inches(0.6))
     for k, line in enumerate(lines):
         p = tf.paragraphs[0] if k == 0 else tf.add_paragraph()
         p.space_after = Pt(LINE_GAP_PT)
-        write(p, clean(line), BODY_PT, BLACK)
+        write(p, clean(line), pt, BLACK)
     return tf
 
 
@@ -219,8 +231,8 @@ def title_slide(prs, title, date=None):
         top = Inches(4.1)
     else:
         top = Inches(3.3)
-    tf = textbox(s, LEFT, top, SLIDE_W - 2 * LEFT, Inches(0.8), MSO_ANCHOR.MIDDLE)
-    write(tf.paragraphs[0], clean(title), HEADING_PT, GREY_CLOSING, PP_ALIGN.CENTER)
+    tf = textbox(s, LEFT, top, SLIDE_W - 2 * LEFT, Inches(0.9), MSO_ANCHOR.MIDDLE)
+    write(tf.paragraphs[0], clean(title), TITLE_PT, GREY_CLOSING, PP_ALIGN.CENTER)
     if date:
         tf = textbox(s, LEFT, Inches(6.3), SLIDE_W - 2 * LEFT, Inches(0.5), MSO_ANCHOR.MIDDLE)
         write(tf.paragraphs[0], clean(date).upper(), BODY_PT, GREY_HEADING, PP_ALIGN.CENTER)
@@ -231,12 +243,14 @@ def content_slide(prs, spec):
     heading(s, spec["heading"])
     top = Inches(1.65)
     if "lines" in spec:
-        lines_box(s, LEFT, top, TEXT_W, spec["lines"])
+        pt = pick_size(BODY_SIZES, spec["lines"], TEXT_W)
+        lines_box(s, LEFT, top, TEXT_W, spec["lines"], pt)
     else:
-        lines_box(s, COL_LEFT_X, top, COL_W, spec["left"])
-        lines_box(s, COL_RIGHT_X, top, COL_W, spec["right"])
+        pt = pick_size(BODY_SIZES, spec["left"] + spec["right"], COL_W)
+        lines_box(s, COL_LEFT_X, top, COL_W, spec["left"], pt)
+        lines_box(s, COL_RIGHT_X, top, COL_W, spec["right"], pt)
         n = max(len(spec["left"]), len(spec["right"]))
-        pitch = Pt(BODY_PT * 1.2 + LINE_GAP_PT)
+        pitch = Pt(pt * 1.2 + LINE_GAP_PT)
         bottom = top + int(pitch * n)
         d = s.shapes.add_connector(MSO_CONNECTOR.STRAIGHT, DIVIDER_X, top - Inches(0.1),
                                    DIVIDER_X, bottom - Inches(0.2))
@@ -246,8 +260,8 @@ def content_slide(prs, spec):
 
 def closing_slide(prs, text):
     s = blank(prs)
-    tf = textbox(s, LEFT, Inches(3.3), SLIDE_W - 2 * LEFT, Inches(0.8), MSO_ANCHOR.MIDDLE)
-    write(tf.paragraphs[0], clean(text).upper(), HEADING_PT, GREY_CLOSING, PP_ALIGN.CENTER)
+    tf = textbox(s, LEFT, Inches(3.3), SLIDE_W - 2 * LEFT, Inches(0.9), MSO_ANCHOR.MIDDLE)
+    write(tf.paragraphs[0], clean(text).upper(), TITLE_PT, GREY_CLOSING, PP_ALIGN.CENTER)
 
 
 def build(spec, out_path):

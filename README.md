@@ -5,7 +5,7 @@ A Claude Code agent that makes PowerPoint presentations in one signature style, 
 ## The style
 
 - White slides, grey headings, plain black one-liners with no bullet markers
-- Nirmala Text: headings 22 pt, body 18 pt
+- Nirmala Text: title slide 36 pt, headings 22-24 pt, body 18-20 pt
 - One line per point, minimum words, `&` for "and", ` | ` to pair items
 - Title slide with date, optional Sequence agenda, THANK YOU at the end
 - 12 slides at most

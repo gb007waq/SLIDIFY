@@ -1,6 +1,6 @@
 ---
 name: slidify
-description: Make a PowerPoint presentation in the owner's signature style (white slides, grey headings, plain black one-liners without bullet markers, Nirmala Text, 12 slides max), modelled on their reference deck. Use whenever the user asks for a presentation, deck, slides or PPT, or says "slidify" something.
+description: Make a PowerPoint presentation in the owner's signature style (white slides, grey headings, plain black one-liners without bullet markers, Nirmala Text at 36/24/20 pt, 12 slides max), modelled on their reference deck. Use whenever the user asks for a presentation, deck, slides or PPT, or says "slidify" something.
 ---
 
 # Slidify
@@ -15,7 +15,8 @@ If you can read PDFs, look at `reference/CMPO Gov.pdf` too: match its tone, line
 
 ## The rules in short
 
-- White background. Grey headings (22 pt). Black body lines (18 pt). Nirmala Text. Nothing else.
+- White background, Nirmala Text, nothing else.
+- Title slide 36 pt. Grey headings 22-24 pt. Black body lines 18-20 pt. The builder picks the size within each range.
 - **No bullet markers.** Each point is a plain one-liner with space around it.
 - One line per point, 12 words at most (aim for 4-8). Never two lines.
 - Pair related items with ` | `, and use `&` for "and". No full stops.
