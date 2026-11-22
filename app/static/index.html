@@ -254,7 +254,7 @@ syncCount();
 // Speaking languages (slides are always written in English)
 const LANGS = [
   ["en-US", "English"], ["en-GB", "English (UK)"], ["en-IN", "English (India)"],
-  ["ur-PK", "Urdu · اردو"], ["ps-AF", "Pashto · پښتو"], ["pa-IN", "Punjabi · ਪੰਜਾਬੀ"],
+  ["ur-PK", "Urdu · اردو"], ["pa-IN", "Punjabi · ਪੰਜਾਬੀ"],
   ["sd-IN", "Sindhi · سنڌي"], ["fa-IR", "Persian · فارسی"], ["ar-SA", "Arabic · العربية"],
   ["hi-IN", "Hindi · हिन्दी"], ["bn-BD", "Bengali · বাংলা"], ["ta-IN", "Tamil · தமிழ்"],
   ["te-IN", "Telugu · తెలుగు"], ["mr-IN", "Marathi · मराठी"], ["gu-IN", "Gujarati · ગુજરાતી"],
@@ -273,7 +273,10 @@ const LANGS = [
   ["am-ET", "Amharic · አማርኛ"], ["ha-NG", "Hausa"], ["yo-NG", "Yoruba"], ["zu-ZA", "Zulu · isiZulu"],
 ];
 LANGS.forEach(([code, name]) => $("lang").add(new Option(name, code)));
-try { const saved = localStorage.getItem("slidify-lang"); if (saved) $("lang").value = saved; } catch (_) {}
+try {
+  const saved = localStorage.getItem("slidify-lang");
+  if (saved && LANGS.some(([code]) => code === saved)) $("lang").value = saved;
+} catch (_) {}
 $("lang").addEventListener("change", () => { try { localStorage.setItem("slidify-lang", $("lang").value); } catch (_) {} });
 
 // Speaking mode (Web Speech API: Chrome & Edge)
