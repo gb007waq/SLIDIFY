@@ -404,6 +404,37 @@ def create_job():
     return jsonify(id=jid)
 
 
+@app.post("/api/translate")
+def translate():
+    """Faithful translation of spoken text into English (no summarising, nothing added)."""
+    data = request.json or {}
+    text = (data.get("text") or "").strip()
+    lang = (data.get("language") or "the speaker's language").strip()[:60]
+    if not text:
+        return jsonify(error="Nothing to translate."), 400
+    folder = JOBS / "translate"
+    folder.mkdir(exist_ok=True)
+    prompt = (
+        "The text below is what a speech recogniser heard. Work out what the speaker actually said "
+        "and give it in English.\n"
+        f"The recogniser was set to {lang}, but the speaker may have used any language in the world, "
+        "or a mix of languages (for example Pashto with English words). If the recogniser was set "
+        "to a different language from the one spoken, it will have written the sounds as look-alike "
+        "words or in the wrong script (for example Pashto 'mala da 12 slides presentation jor ka' "
+        "heard as English words). Read it phonetically, work out which language was really spoken, "
+        "recover the speaker's real words, and translate them.\n"
+        "Rules: translate exactly what was said - same meaning, details, names and numbers. "
+        "Do not summarise, explain, answer, add or leave out anything. Keep parts that are "
+        "already English as they are. Write every number as digits (10, not ten). "
+        "Reply with ONLY the English, no quotes, no notes.\n\n"
+        f"<speech>\n{text}\n</speech>")
+    try:
+        english, _ = run_claude(prompt, folder, None, 180)
+    except Exception as e:  # noqa: BLE001
+        return jsonify(error=f"Translation failed: {e}"), 502
+    return jsonify(english=english.strip().strip('"'))
+
+
 @app.post("/api/jobs/<jid>/revise")
 def revise(jid):
     job = jobs.get(jid) or abort(404)

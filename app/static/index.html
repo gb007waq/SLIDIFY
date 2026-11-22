@@ -108,6 +108,10 @@
   .check.small { font-size: 14px; color: var(--grey-2); margin-top: 10px; }
   .check.small input { width: 16px; height: 16px; }
   .interim { color: var(--grey-4); font-size: 14px; min-height: 1.2em; margin-top: 6px; }
+  .said { font-size: 14px; color: var(--grey-2); background: var(--wash); border-radius: 6px; padding: 8px 10px; margin-top: 4px; }
+  .said span { color: var(--grey-4); margin-right: 4px; }
+  .speak .live { flex-basis: 100%; }
+  @media (min-width: 420px) { .speak .live { flex-basis: auto; } }
   .hint { color: var(--grey-4); font-size: 13px; margin: 8px 0 0; }
   [hidden] { display: none !important; }
 </style>
@@ -122,12 +126,13 @@
   <form class="panel" id="form" autocomplete="off">
     <h2>New presentation</h2>
 
+    <label class="title" for="lang">I'm speaking</label>
     <div class="speak" id="speakBox">
+      <select id="lang" aria-label="Language you are speaking"></select>
       <button class="mic" id="mic" type="button" aria-pressed="false">
         <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-2.08A7 7 0 0 0 19 12h-2Z"/></svg>
         <span id="micLabel">Speak</span>
       </button>
-      <select id="lang" aria-label="Speaking language"></select>
       <span class="live" id="live" hidden><i></i>Listening...</span>
     </div>
     <label class="check small"><input type="checkbox" id="autoMake" checked> Make the presentation when I stop speaking</label>
@@ -136,6 +141,7 @@
     <label class="title" for="brief">Topic, notes or instructions</label>
     <textarea id="brief" name="brief" placeholder="Type here, or press Speak and say what the presentation is about"></textarea>
     <div class="interim" id="interim"></div>
+    <div class="said" id="said" hidden><span>You said</span> <bdi id="saidText"></bdi></div>
 
     <label class="title">Source files</label>
     <div class="drop" id="drop" tabindex="0" role="button" aria-label="Add Word, PDF or picture files">
@@ -272,7 +278,44 @@ $("lang").addEventListener("change", () => { try { localStorage.setItem("slidify
 
 // Speaking mode (Web Speech API: Chrome & Edge)
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-let rec = null, listening = false, spoken = false, baseText = "", submitAfterStop = false;
+let rec = null, listening = false, spoken = false, baseText = "", submitAfterStop = false, startText = "";
+
+// Turn what was heard (any language, even if the recogniser guessed the wrong one) into faithful English.
+async function understand(raw) {
+  const language = $("lang").selectedOptions[0].text.split(" · ")[0];
+  busy(true, "Understanding what you said...");
+  try {
+    const r = await fetch("/api/translate", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: raw, language })
+    });
+    const d = await r.json();
+    if (!r.ok || !d.english) throw new Error(d.error || "no translation");
+    $("brief").value = (startText ? startText + " " : "") + d.english;
+    $("saidText").textContent = raw;
+    $("said").hidden = d.english.trim() === raw.trim();
+    applyCount(d.english);
+    busy(false, "");
+  } catch (err) {
+    busy(false, "");
+    $("micNote").textContent = "Couldn't translate, so SLIDIFY will use exactly what was heard.";
+  }
+}
+
+// "12 slides", "20 slides", "15 to 20 slides" in what was said sets the slide count.
+function applyCount(text) {
+  const m = text.match(/(\d{1,3})\s*(?:-|–|to)\s*(\d{1,3})[\s-]*slides?/i) || text.match(/(\d{1,3})[\s-]*slides?/i);
+  if (!m) return;
+  const a = +m[1], b = m[2] ? +m[2] : null;
+  if (b && a >= 15 && b <= 20) { $("slidesMode").value = "long"; }
+  else {
+    const n = Math.max(3, Math.min(99, b || a));
+    if (n === 12) $("slidesMode").value = "standard";
+    else if (n >= 5 && n <= 11) { $("slidesMode").value = "fewer"; $("fewerN").value = String(n); }
+    else { $("slidesMode").value = "custom"; $("customN").value = n; }
+  }
+  syncCount();
+}
 function setListening(on) {
   listening = on;
   $("mic").classList.toggle("on", on);
@@ -313,7 +356,7 @@ if (!SR) {
         e.error === "network" ? "Speech needs an internet connection. Check it and try again." :
         "Speech stopped: " + e.error;
     };
-    rec.onend = () => {
+    rec.onend = async () => {
       if (listening) {           // browser paused after silence: keep going
         baseText = $("brief").value.trim();
         try { rec.start(); return; } catch (_) {}
@@ -321,8 +364,12 @@ if (!SR) {
       setListening(false);
       const go = submitAfterStop || (spoken && $("autoMake").checked);
       submitAfterStop = false;
+      const raw = $("brief").value.trim().slice(startText.length).trim();
+      if (raw) await understand(raw);
       if (go && $("brief").value.trim()) $("form").requestSubmit();
     };
+    startText = $("brief").value.trim();
+    $("said").hidden = true;
     rec.start();
     setListening(true);
   };
