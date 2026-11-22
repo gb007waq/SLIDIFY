@@ -22,7 +22,7 @@ If you can read PDFs, look at `reference/CMPO Gov.pdf` too: match its tone, line
 - Pair related items with ` | `, and use `&` for "and". No full stops.
 - 3-7 lines per slide. Use two columns for lists of short items.
 - First slide is the title (with date), then optionally a "Sequence" agenda. Last slide is THANK YOU.
-- 12 slides at most in total.
+- 12 slides by default (title, Sequence and THANK YOU included). If the user asks for fewer, 15-20, or an exact number, follow that and pass it to the builder with `--slides`.
 
 ## Workflow
 
@@ -48,8 +48,10 @@ If you can read PDFs, look at `reference/CMPO Gov.pdf` too: match its tone, line
 5. **Build** with the script in this skill's base directory (shown when the skill loads):
 
    ```
-   python "<skill base directory>/scripts/build_deck.py" spec.json "Deck Title.pptx"
+   python "<skill base directory>/scripts/build_deck.py" spec.json "Deck Title.pptx" --slides 12
    ```
+
+   `--slides 8` means exactly 8 slides; `--slides 15-20` means 15 to 20. Leave it out for "at most 12".
 
    It needs `python-pptx`; Pillow gives exact line-fit checks. If they are missing, run `python -m pip install --user python-pptx pillow`.
 

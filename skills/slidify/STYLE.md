@@ -34,7 +34,8 @@ Taken from the owner's reference deck, `reference/CMPO Gov.pdf`. Open it wheneve
 - Plain, direct statements in the active voice: "CMPO will not replicate any function already assigned in the Government".
 - Keep dates and figures compact: "13th Aug, 24", "200 M PKR", "~50 M PKR".
 - 3-7 lines per slide. A list of more than 7 short items goes in two columns.
-- 12 slides at most in total; 10-12 for a full talk.
+- **12 slides by default**, counting the title, Sequence and THANK YOU slides. When the owner asks for another number (fewer, 15-20, or any exact count), use that instead.
+- The Sequence slide lists up to 7 headings in one column and up to 14 in two columns. With more than 14 content slides, leave it out.
 
 ## Reference examples
 

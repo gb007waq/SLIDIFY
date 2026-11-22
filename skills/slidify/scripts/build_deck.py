@@ -4,7 +4,10 @@ Builds a .pptx in the Slidify signature style (see ../STYLE.md) from a JSON
 spec, and refuses any spec that breaks the style rules.
 
 Usage:
-    python build_deck.py spec.json [output.pptx]
+    python build_deck.py spec.json [output.pptx] [--slides N | --slides A-B]
+
+Slide count (title, agenda and THANK YOU included): at most 12 by default.
+--slides 8 means exactly 8; --slides 15-20 means between 15 and 20.
 
 Spec format:
 {
@@ -111,16 +114,39 @@ def slide_count(spec):
             + (1 if spec.get("closing", "THANK YOU") else 0))
 
 
-def validate(spec):
+MAX_AGENDA = 2 * MAX_LINES   # agenda goes to two columns after 7 headings
+
+
+def parse_slides(arg):
+    """'12' -> (12, 12); '15-20' -> (15, 20)."""
+    a, _, b = str(arg).partition("-")
+    lo, hi = int(a), int(b or a)
+    if lo < 3 or hi < lo:
+        raise ValueError(f"Bad slide count: {arg!r}")
+    return lo, hi
+
+
+def agenda_slide(spec):
+    """The Sequence slide: one column up to 7 headings, then two columns."""
+    heads = [s["heading"] for s in spec.get("slides", [])]
+    if len(heads) <= MAX_LINES:
+        return {"heading": "Sequence", "lines": heads}
+    half = (len(heads) + 1) // 2
+    return {"heading": "Sequence", "left": heads[:half], "right": heads[half:]}
+
+
+def validate(spec, min_slides=1, max_slides=MAX_SLIDES):
     errors = []
     slides = spec.get("slides", [])
     total = slide_count(spec)
-    if total > MAX_SLIDES:
-        errors.append(f"Deck has {total} slides; the maximum is {MAX_SLIDES}.")
+    if total > max_slides or total < min_slides:
+        want = f"exactly {min_slides}" if min_slides == max_slides else (
+            f"between {min_slides} and {max_slides}" if min_slides > 1 else f"at most {max_slides}")
+        errors.append(f"Deck has {total} slides (title, agenda & THANK YOU included); it must have {want}.")
     if not spec.get("title"):
         errors.append("Missing deck title.")
-    if spec.get("agenda") and len(slides) > MAX_LINES:
-        errors.append(f"Agenda would list {len(slides)} headings (max {MAX_LINES}); drop the agenda or merge slides.")
+    if spec.get("agenda") and len(slides) > MAX_AGENDA:
+        errors.append(f"Agenda would list {len(slides)} headings (max {MAX_AGENDA}); drop the agenda.")
 
     def check(label, text, limit, pt, width):
         if "\n" in str(text):
@@ -136,7 +162,8 @@ def validate(spec):
     check("Title", spec.get("title", ""), 8, TITLE_PT, SLIDE_W - 2 * LEFT)
 
     for i, s in enumerate(slides, start=2 + (1 if spec.get("agenda") else 0)):
-        check(f"Slide {i} heading", s.get("heading", ""), MAX_HEADING_WORDS, HEADING_PT, TEXT_W)
+        check(f"Slide {i} heading", s.get("heading", ""), MAX_HEADING_WORDS, HEADING_PT,
+              COL_W if spec.get("agenda") and len(slides) > MAX_LINES else TEXT_W)
         if "lines" in s:
             cols = [("", s["lines"], TEXT_W)]
         else:
@@ -269,8 +296,7 @@ def build(spec, out_path):
     prs.slide_width, prs.slide_height = SLIDE_W, SLIDE_H
     title_slide(prs, spec["title"], spec.get("date"))
     if spec.get("agenda"):
-        content_slide(prs, {"heading": "Sequence",
-                            "lines": [s["heading"] for s in spec["slides"]]})
+        content_slide(prs, agenda_slide(spec))
     for s in spec.get("slides", []):
         content_slide(prs, s)
     closing = spec.get("closing", "THANK YOU")
@@ -279,15 +305,30 @@ def build(spec, out_path):
     prs.save(out_path)
 
 
+def split_args(argv):
+    """Pull '--slides N' or '--slides A-B' out of argv. Default: at most 12."""
+    args, limits = [], (1, MAX_SLIDES)
+    it = iter(argv)
+    for a in it:
+        if a == "--slides":
+            limits = parse_slides(next(it))
+        elif a.startswith("--slides="):
+            limits = parse_slides(a.split("=", 1)[1])
+        else:
+            args.append(a)
+    return args, limits
+
+
 def main():
-    if len(sys.argv) < 2:
+    args, (lo, hi) = split_args(sys.argv[1:])
+    if not args:
         print(__doc__)
         sys.exit(2)
-    spec_path = Path(sys.argv[1])
+    spec_path = Path(args[0])
     spec = json.loads(spec_path.read_text(encoding="utf-8-sig"))
-    out = Path(sys.argv[2]) if len(sys.argv) > 2 else spec_path.with_suffix(".pptx")
+    out = Path(args[1]) if len(args) > 1 else spec_path.with_suffix(".pptx")
 
-    errors = validate(spec)
+    errors = validate(spec, lo, hi)
     if errors:
         print("STYLE CHECK FAILED - fix these and run again:")
         for e in errors:

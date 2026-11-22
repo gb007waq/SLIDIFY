@@ -34,7 +34,7 @@ TEXT_TYPES = {".txt", ".md"}
 DOC_TYPES = {".docx"}
 READ_TYPES = {".pdf", ".png", ".jpg", ".jpeg", ".webp", ".gif"}
 ALLOWED = TEXT_TYPES | DOC_TYPES | READ_TYPES
-MAX_TRIES = 3
+MAX_TRIES = 4
 CLAUDE_TIMEOUT = 600
 
 app = Flask(__name__, static_folder=str(ROOT / "static"), static_url_path="/static")
@@ -103,6 +103,33 @@ def extract_spec(text):
         raise RuntimeError("Could not read the presentation Claude wrote. Try again.")
 
 
+def slide_limits(mode, n):
+    """Turn the page's slide-count choice into (min, max) total slides."""
+    if mode == "fewer":
+        n = max(5, min(11, n or 8))
+        return n, n
+    if mode == "long":
+        return 15, 20
+    if mode == "custom":
+        n = max(3, min(40, n or 12))
+        return n, n
+    return 12, 12
+
+
+def count_rule(job):
+    lo, hi = job["limits"]
+    return f"exactly {lo} slides in total." if lo == hi else f"between {lo} and {hi} slides in total."
+
+
+def content_rule(job):
+    lo, hi = job["limits"]
+    extra = 2 + (1 if job["agenda"] else 0)
+    a, b = max(1, lo - extra), max(1, hi - extra)
+    if job["agenda"]:
+        b = max(a, min(b, bd.MAX_AGENDA))
+    return str(a) if a == b else f"{a} to {b}"
+
+
 def first_prompt(job):
     today = dt.date.today().strftime("%b, %Y").upper()
     lines = [
@@ -111,10 +138,14 @@ def first_prompt(job):
         "",
         "<style_guide>", STYLE, "</style_guide>",
         "",
-        "Builder limits: 12 slides total (title, optional Sequence agenda and THANK YOU count);",
-        "3-7 lines per slide or per column; at most 12 words per line; headings at most 5 words;",
-        "every line must fit on one line of a 16:9 slide at 20 pt (two-column lines are half width).",
-        "An agenda is only allowed with 7 or fewer content slides.",
+        "Builder limits: 3-7 lines per slide or per column; at most 12 words per line;",
+        "headings at most 5 words; every line must fit on one line of a 16:9 slide at 20 pt",
+        "(two-column lines are half width). The agenda lists up to 14 content headings.",
+        "",
+        f"SLIDE COUNT: {count_rule(job)}",
+        "The title slide, the Sequence agenda (if any) and the THANK YOU slide all count.",
+        f"So the 'slides' array must hold {content_rule(job)} content slides.",
+        "Spread the material evenly; never pad with filler slides.",
         "",
         "Reply with ONLY the JSON spec in a ```json block, nothing else. Schema:",
         '{"title": str, "date": str, "agenda": bool, "slides": [{"heading": str, "lines": [str]}'
@@ -123,17 +154,18 @@ def first_prompt(job):
         f"Date to use: {job['date'] or today}.",
         f"Include a Sequence agenda slide: {'yes' if job['agenda'] else 'no'}.",
     ]
-    if job["max_slides"]:
-        lines.append(f"Total slides including title and THANK YOU: {job['max_slides']} at most.")
     if job["brief"]:
         lines += ["", "What the deck is about / instructions from the owner:", job["brief"]]
+        if job.get("spoken"):
+            lines += ["(This was spoken and transcribed by speech recognition: ignore filler words,",
+                      "fix obvious recognition mistakes, and write the slides in English unless asked otherwise.)"]
     if job["sources"]:
         lines += ["", "Source material - read every file with the Read tool, then build the deck from it:"]
         lines += [f"- {p}" for p in job["sources"]]
     return "\n".join(lines)
 
 
-def make_deck(jid, prompt, session=None):
+def make_deck(jid, prompt, session=None, limits=(1, bd.MAX_SLIDES)):
     job = jobs[jid]
     folder = JOBS / jid
     set_job(jid, status="working", message="SLIDIFY is reading and writing your slides...")
@@ -141,7 +173,7 @@ def make_deck(jid, prompt, session=None):
     spec = extract_spec(text)
     for attempt in range(1, MAX_TRIES + 1):
         spec.pop("closing", None)
-        errors = bd.validate(spec)
+        errors = bd.validate(spec, *limits)
         if not errors:
             break
         if attempt == MAX_TRIES:
@@ -165,9 +197,9 @@ def make_deck(jid, prompt, session=None):
             downloads={k: base + out[k].name for k in ("pptx", "pdf", "zip", "docx")})
 
 
-def worker(jid, prompt, session=None):
+def worker(jid, prompt, session=None, limits=(1, bd.MAX_SLIDES)):
     try:
-        make_deck(jid, prompt, session)
+        make_deck(jid, prompt, session, limits)
     except subprocess.TimeoutExpired:
         set_job(jid, status="error", message="SLIDIFY took too long. Try a shorter brief or fewer files.")
     except Exception as e:  # noqa: BLE001
@@ -205,15 +237,19 @@ def create_job():
             sources.append(str(path))
 
     try:
-        max_slides = max(4, min(12, int(request.form.get("max_slides") or 12)))
+        n = int(request.form.get("slides_n") or 0)
     except ValueError:
-        max_slides = 12
+        n = 0
+    limits = slide_limits(request.form.get("slides_mode", "standard"), n)
+    agenda = request.form.get("agenda") == "true"
+    if agenda and limits[0] - 3 > bd.MAX_AGENDA:
+        agenda = False  # too many slides to list on one agenda slide
     job = {"id": jid, "status": "queued", "message": "Starting...", "brief": brief,
            "sources": sources, "date": (request.form.get("date") or "").strip(),
-           "agenda": request.form.get("agenda") == "true", "max_slides": max_slides}
+           "agenda": agenda, "limits": limits, "spoken": request.form.get("spoken") == "true"}
     with lock:
         jobs[jid] = job
-    threading.Thread(target=worker, args=(jid, first_prompt(job)), daemon=True).start()
+    threading.Thread(target=worker, args=(jid, first_prompt(job), None, limits), daemon=True).start()
     return jsonify(id=jid)
 
 
@@ -226,10 +262,12 @@ def revise(jid):
     if not feedback:
         return jsonify(error="Say what to change."), 400
     prompt = ("Change the deck as the owner asks, keeping every style rule:\n" + feedback +
+              f"\n\nKeep the slide count rule ({count_rule(job)}) unless the owner asks for a different number"
+              " (3 to 40 slides allowed)."
               "\n\nCurrent deck:\n```json\n" + json.dumps(job.get("spec", {}), ensure_ascii=False) +
               "\n```\nReply with the full updated JSON spec only.")
     set_job(jid, status="working", message="Applying your changes...")
-    threading.Thread(target=worker, args=(jid, prompt, job.get("session")), daemon=True).start()
+    threading.Thread(target=worker, args=(jid, prompt, job.get("session"), (3, 40)), daemon=True).start()
     return jsonify(id=jid)
 
 

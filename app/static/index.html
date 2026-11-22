@@ -34,11 +34,12 @@
 
   .panel h2, .result h2 { margin: 0 0 14px; font-weight: 400; font-size: 22px; color: var(--grey-4); }
   label.title { display: block; font-size: 14px; color: var(--grey-3); margin: 18px 0 6px; }
-  textarea, input[type=text], select {
+  textarea, input[type=text], input[type=number], select {
     width: 100%; border: 1px solid var(--line); border-radius: 6px; background: var(--bg);
     padding: 10px 12px; font-size: 16px; outline: none;
   }
   textarea:focus, input:focus, select:focus { border-color: var(--grey-3); }
+  .speak select { width: auto; }
   textarea { min-height: 120px; resize: vertical; line-height: 1.5; }
 
   .drop {
@@ -95,6 +96,19 @@
                    color: #fff; font-size: 28px; width: 48px; height: 48px; border-radius: 50%; cursor: pointer; }
   .lightbox .prev { left: 16px; } .lightbox .next { right: 16px; }
   .lightbox .close { position: fixed; top: 14px; right: 18px; border: 0; background: none; color: #fff; font-size: 30px; cursor: pointer; }
+  .speak { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
+  .mic { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--grey-1); background: var(--bg);
+         color: var(--grey-1); border-radius: 22px; padding: 9px 18px; cursor: pointer; font-size: 16px; }
+  .mic:hover { background: var(--wash); }
+  .mic.on { background: var(--grey-1); color: #fff; }
+  .speak select { width: auto; padding: 8px 10px; font-size: 15px; }
+  .live { display: inline-flex; align-items: center; gap: 8px; color: var(--grey-2); font-size: 14px; }
+  .live i { width: 9px; height: 9px; border-radius: 50%; background: var(--grey-1); animation: pulse 1s ease-in-out infinite; }
+  @keyframes pulse { 50% { opacity: .2; } }
+  .check.small { font-size: 14px; color: var(--grey-2); margin-top: 10px; }
+  .check.small input { width: 16px; height: 16px; }
+  .interim { color: var(--grey-4); font-size: 14px; min-height: 1.2em; margin-top: 6px; }
+  .hint { color: var(--grey-4); font-size: 13px; margin: 8px 0 0; }
   [hidden] { display: none !important; }
 </style>
 </head>
@@ -108,8 +122,24 @@
   <form class="panel" id="form" autocomplete="off">
     <h2>New presentation</h2>
 
+    <div class="speak" id="speakBox">
+      <button class="mic" id="mic" type="button" aria-pressed="false">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-2.08A7 7 0 0 0 19 12h-2Z"/></svg>
+        <span id="micLabel">Speak</span>
+      </button>
+      <select id="lang" aria-label="Speaking language">
+        <option value="en-US">English</option>
+        <option value="en-GB">English (UK)</option>
+        <option value="ur-PK">اردو Urdu</option>
+      </select>
+      <span class="live" id="live" hidden><i></i>Listening...</span>
+    </div>
+    <label class="check small"><input type="checkbox" id="autoMake" checked> Make the presentation when I stop speaking</label>
+    <div class="error" id="micNote"></div>
+
     <label class="title" for="brief">Topic, notes or instructions</label>
-    <textarea id="brief" name="brief" placeholder="e.g. Employment generation in KP for the CM briefing, focus on TVET reform"></textarea>
+    <textarea id="brief" name="brief" placeholder="Type here, or press Speak and say what the presentation is about"></textarea>
+    <div class="interim" id="interim"></div>
 
     <label class="title">Source files</label>
     <div class="drop" id="drop" tabindex="0" role="button" aria-label="Add Word, PDF or picture files">
@@ -125,10 +155,24 @@
         <input type="text" id="date" name="date">
       </div>
       <div>
-        <label class="title" for="max">Slides (max)</label>
-        <select id="max" name="max_slides"></select>
+        <label class="title" for="slidesMode">Number of slides</label>
+        <select id="slidesMode">
+          <option value="standard">12 slides (standard)</option>
+          <option value="fewer">Fewer than 12</option>
+          <option value="long">15 to 20 slides</option>
+          <option value="custom">Custom number</option>
+        </select>
       </div>
     </div>
+    <div id="fewerBox" hidden>
+      <label class="title" for="fewerN">How many slides</label>
+      <select id="fewerN"></select>
+    </div>
+    <div id="customBox" hidden>
+      <label class="title" for="customN">How many slides (3 to 40)</label>
+      <input type="number" id="customN" min="3" max="40" value="25" inputmode="numeric">
+    </div>
+    <p class="hint" id="countHint">Title, Sequence and THANK YOU slides are included in the count.</p>
 
     <label class="check"><input type="checkbox" id="agenda" checked> Add a Sequence (agenda) slide</label>
 
@@ -180,7 +224,85 @@ let timer = null;
 const months = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
 const now = new Date();
 $("date").value = `${months[now.getMonth()]}, ${now.getFullYear()}`;
-for (let n = 12; n >= 5; n--) $("max").add(new Option(n, n));
+for (let n = 11; n >= 5; n--) $("fewerN").add(new Option(`${n} slides`, n));
+$("fewerN").value = "8";
+
+// Slide count
+function countChoice() {
+  const mode = $("slidesMode").value;
+  let n = 12;
+  if (mode === "fewer") n = +$("fewerN").value;
+  if (mode === "custom") n = Math.max(3, Math.min(40, parseInt($("customN").value, 10) || 12));
+  return { mode, n };
+}
+function syncCount() {
+  const { mode, n } = countChoice();
+  $("fewerBox").hidden = mode !== "fewer";
+  $("customBox").hidden = mode !== "custom";
+  const total = mode === "long" ? 15 : n;
+  const tooMany = $("agenda").checked && total - 3 > 14;
+  $("countHint").textContent = tooMany
+    ? "Too many slides for one Sequence slide, so it will be left out."
+    : "Title, Sequence and THANK YOU slides are included in the count.";
+}
+["slidesMode", "fewerN", "customN", "agenda"].forEach(id => $(id).addEventListener("input", syncCount));
+syncCount();
+
+// Speaking mode (Web Speech API: Chrome & Edge)
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+let rec = null, listening = false, spoken = false, baseText = "", submitAfterStop = false;
+function setListening(on) {
+  listening = on;
+  $("mic").classList.toggle("on", on);
+  $("mic").setAttribute("aria-pressed", on);
+  $("micLabel").textContent = on ? "Stop" : "Speak";
+  $("live").hidden = !on;
+  if (!on) $("interim").textContent = "";
+}
+if (!SR) {
+  $("mic").disabled = true;
+  $("micNote").textContent = "Speaking needs Chrome or Edge. You can still type.";
+} else {
+  $("mic").onclick = () => {
+    if (listening) { listening = false; rec.stop(); return; }
+    $("micNote").textContent = "";
+    rec = new SR();
+    rec.lang = $("lang").value;
+    rec.continuous = true;
+    rec.interimResults = true;
+    baseText = $("brief").value.trim();
+    rec.onresult = (e) => {
+      let finalText = "", interim = "";
+      for (let i = 0; i < e.results.length; i++) {
+        const t = e.results[i][0].transcript;
+        if (e.results[i].isFinal) finalText += t + " "; else interim += t;
+      }
+      $("brief").value = (baseText ? baseText + " " : "") + finalText.trim();
+      $("interim").textContent = interim;
+      if (finalText.trim()) spoken = true;
+    };
+    rec.onerror = (e) => {
+      if (e.error === "no-speech") return;
+      listening = false;
+      $("micNote").textContent = e.error === "not-allowed"
+        ? "Microphone blocked. Allow the microphone for this page and try again."
+        : "Speech stopped: " + e.error;
+    };
+    rec.onend = () => {
+      if (listening) {           // browser paused after silence: keep going
+        baseText = $("brief").value.trim();
+        try { rec.start(); return; } catch (_) {}
+      }
+      setListening(false);
+      const go = submitAfterStop || (spoken && $("autoMake").checked);
+      submitAfterStop = false;
+      if (go && $("brief").value.trim()) $("form").requestSubmit();
+    };
+    rec.start();
+    setListening(true);
+  };
+}
+$("brief").addEventListener("input", () => { if (!listening) spoken = false; });
 
 // Files
 function renderChips() {
@@ -255,11 +377,15 @@ async function poll() {
 
 $("form").onsubmit = async (e) => {
   e.preventDefault();
+  if (listening) { submitAfterStop = true; listening = false; rec.stop(); return; }  // onend submits
   $("error").textContent = "";
   const fd = new FormData();
   fd.append("brief", $("brief").value);
   fd.append("date", $("date").value);
-  fd.append("max_slides", $("max").value);
+  const count = countChoice();
+  fd.append("slides_mode", count.mode);
+  fd.append("slides_n", count.n);
+  fd.append("spoken", spoken ? "true" : "false");
   fd.append("agenda", $("agenda").checked ? "true" : "false");
   picked.forEach(f => fd.append("files", f));
   if (!$("brief").value.trim() && !picked.length) { $("error").textContent = "Write a topic or add a file."; return; }

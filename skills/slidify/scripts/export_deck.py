@@ -96,7 +96,7 @@ def render_slides(spec):
 
     content = list(spec.get("slides", []))
     if spec.get("agenda"):
-        content.insert(0, {"heading": "Sequence", "lines": [s["heading"] for s in spec["slides"]]})
+        content.insert(0, bd.agenda_slide(spec))
 
     for s in content:
         img = Image.new("RGB", (W, H), "white")
@@ -225,17 +225,18 @@ def export_all(spec, folder, stem="deck"):
 
 
 def main():
-    if len(sys.argv) < 3:
+    args, (lo, hi) = bd.split_args(sys.argv[1:])
+    if len(args) < 2:
         print(__doc__)
         sys.exit(2)
-    spec = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8-sig"))
-    errors = bd.validate(spec)
+    spec = json.loads(Path(args[0]).read_text(encoding="utf-8-sig"))
+    errors = bd.validate(spec, lo, hi)
     if errors:
         print("STYLE CHECK FAILED - fix these and run again:")
         for e in errors:
             print("  - " + e)
         sys.exit(1)
-    out = export_all(spec, sys.argv[2], stem=bd.clean(spec["title"]))
+    out = export_all(spec, args[1], stem=bd.clean(spec["title"]))
     for k, v in out.items():
         print(k, ":", f"{len(v)} files" if isinstance(v, list) else v)
 

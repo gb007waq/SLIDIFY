@@ -8,7 +8,7 @@ A Claude Code agent that makes PowerPoint presentations in one signature style, 
 - Nirmala Text: title slide 36 pt, headings 22-24 pt, body 18-20 pt
 - One line per point, minimum words, `&` for "and", ` | ` to pair items
 - Title slide with date, optional Sequence agenda, THANK YOU at the end
-- 12 slides at most
+- 12 slides by default; fewer, 15-20 or any number on request
 
 The full guide is in [skills/slidify/STYLE.md](skills/slidify/STYLE.md). The builder refuses any deck that breaks the rules, so the agent rewrites until it fits.
 
@@ -40,7 +40,9 @@ Decks are saved to `Documents\Slidify` unless you name another folder.
 
 A web page on your computer for making decks without typing in Claude Code.
 
-- **Put in:** a topic or notes, plus Word (.docx), PDF, pictures or text files
+- **Put in:** a topic or notes (typed or spoken), plus Word (.docx), PDF, pictures or text files
+- **Speak:** press Speak, say what the presentation is about in English or Urdu, press Stop. It makes the slides (needs Chrome or Edge)
+- **Slides:** 12 (standard), fewer than 12, 15 to 20, or any custom number from 3 to 40
 - **Get out:** PowerPoint, PDF, slide pictures (.zip) and Word, with a preview of every slide
 - **Change something:** type what to change ("merge slides 4 & 5") and it rebuilds the deck
 
