@@ -1,0 +1,14 @@
+{
+  "name": "slidify",
+  "owner": {
+    "name": "gb007waq"
+  },
+  "description": "Home of the SLIDIFY presentation agent.",
+  "plugins": [
+    {
+      "name": "slidify",
+      "source": "./",
+      "description": "SLIDIFY agent: PowerPoint decks in the owner's signature style."
+    }
+  ]
+}

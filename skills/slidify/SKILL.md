@@ -44,13 +44,13 @@ If you can read PDFs, look at `reference/CMPO Gov.pdf` too: match its tone, line
 
    `closing` defaults to THANK YOU. Use today's month and year for `date` unless told otherwise.
 
-5. **Build** with the script in this skill's folder (normally `~/.claude/skills/slidify`):
+5. **Build** with the script in this skill's base directory (shown when the skill loads):
 
    ```
-   python "<skill folder>/scripts/build_deck.py" spec.json "Deck Title.pptx"
+   python "<skill base directory>/scripts/build_deck.py" spec.json "Deck Title.pptx"
    ```
 
-   It needs `python-pptx`; Pillow gives exact line-fit checks.
+   It needs `python-pptx`; Pillow gives exact line-fit checks. If they are missing, run `python -m pip install --user python-pptx pillow`.
 
 6. **If the style check fails,** shorten the flagged lines (never split them) and build again until it prints `OK`.
 7. **Report** the `.pptx` path and list the slide headings.

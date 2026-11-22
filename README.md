@@ -1,32 +1,57 @@
-# Slidify
+# SLIDIFY
 
-A Claude Code skill that makes presentations in one signature minimalist style.
+A Claude Code agent that makes PowerPoint presentations in one signature style, taken from the owner's reference deck.
 
 ## The style
 
-- Greys only: `#333333`, `#595959`, `#A6A6A6`, `#F2F2F2`
+- White slides, grey headings, plain black one-liners with no bullet markers
 - Nirmala Text: headings 22 pt, body 18 pt
-- One-line bullets, 8 words max, 3-5 per slide
-- 12 slides max, title and closing included
+- One line per point, minimum words, `&` for "and", ` | ` to pair items
+- Title slide with date, optional Sequence agenda, THANK YOU at the end
+- 12 slides at most
 
-The builder refuses any deck that breaks these rules, so Claude rewrites until it fits.
+The full guide is in [skills/slidify/STYLE.md](skills/slidify/STYLE.md). The builder refuses any deck that breaks the rules, so the agent rewrites until it fits.
 
-## Install
+## Install (any computer)
 
-```powershell
-powershell -ExecutionPolicy Bypass -File .\install.ps1
-```
+1. Install Python, then the libraries:
 
-This copies `skills/slidify` to `~/.claude/skills/slidify` and installs `python-pptx` and `pillow`.
+   ```powershell
+   python -m pip install --user python-pptx pillow
+   ```
+
+2. In Claude Code, add this repo and install the plugin:
+
+   ```
+   /plugin marketplace add gb007waq/SLIDIFY
+   /plugin install slidify@slidify
+   ```
+
+3. Restart Claude Code.
 
 ## Use
 
-In Claude Code: *"Slidify a presentation on onboarding new hires"*, or give it notes or a document.
+- Ask: *"Slidify a presentation on employment generation"*, or paste notes or a document.
+- Or call the agent directly: *"Use the slidify agent to make a deck on …"*.
 
-Build by hand from a JSON spec:
+Decks are saved to `Documents\Slidify` unless you name another folder.
+
+## What's inside
+
+| Path | What it is |
+|---|---|
+| `agents/slidify.md` | The SLIDIFY agent |
+| `skills/slidify/SKILL.md` | Step-by-step instructions the agent follows |
+| `skills/slidify/STYLE.md` | The signature style guide |
+| `skills/slidify/reference/` | The reference deck the style comes from |
+| `skills/slidify/scripts/build_deck.py` | Builds the `.pptx` and enforces the style |
+| `skills/slidify/assets/` | Optional logos: `logo_title.png`, `logo_top.png`, `logo_corner.png` |
+| `examples/` | A sample spec and the deck it builds |
+
+Build by hand from a spec:
 
 ```powershell
 python skills\slidify\scripts\build_deck.py examples\sample.json examples\sample.pptx
 ```
 
-See [examples/sample.json](examples/sample.json) for the spec format.
+`install.ps1` is an alternative to the plugin: it copies the skill straight into `~/.claude/skills`.
