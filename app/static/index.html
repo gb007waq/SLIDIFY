@@ -101,12 +101,12 @@
 <body>
 <header>
   <h1>SLIDIFY</h1>
-  <p>Signature decks from a topic, a Word file, a PDF or pictures</p>
+  <p>Signature presentations from a topic, a Word file, a PDF or pictures</p>
 </header>
 
 <main>
   <form class="panel" id="form" autocomplete="off">
-    <h2>New deck</h2>
+    <h2>New presentation</h2>
 
     <label class="title" for="brief">Topic, notes or instructions</label>
     <textarea id="brief" name="brief" placeholder="e.g. Employment generation in KP for the CM briefing, focus on TVET reform"></textarea>
@@ -132,7 +132,7 @@
 
     <label class="check"><input type="checkbox" id="agenda" checked> Add a Sequence (agenda) slide</label>
 
-    <button class="btn primary" id="go" type="submit">Make deck</button>
+    <button class="btn primary" id="go" type="submit">Make presentation</button>
     <div class="error" id="error" role="alert"></div>
   </form>
 
@@ -239,7 +239,7 @@ function show(job) {
 async function poll() {
   clearTimeout(timer);
   const r = await fetch(`/api/jobs/${jobId}`);
-  if (!r.ok) { busy(false, "Lost track of this deck. Make it again."); return; }
+  if (!r.ok) { busy(false, "Lost track of this presentation. Make it again."); return; }
   const job = await r.json();
   if (job.status === "done") {
     busy(false, `Ready · ${job.slides.length} slides`);

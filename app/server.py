@@ -100,7 +100,7 @@ def extract_spec(text):
     try:
         return json.loads(raw)
     except json.JSONDecodeError:
-        raise RuntimeError("Could not read the deck Claude wrote. Try again.")
+        raise RuntimeError("Could not read the presentation Claude wrote. Try again.")
 
 
 def first_prompt(job):
