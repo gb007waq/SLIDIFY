@@ -1,4 +1,4 @@
-﻿# SLIDIFY
+# SLIDIFY
 
 A Claude Code agent that makes PowerPoint presentations in one signature style, taken from the owner's reference deck.
 
@@ -32,7 +32,7 @@ The full guide is in [skills/slidify/STYLE.md](skills/slidify/STYLE.md). The bui
 ## Use
 
 - Ask: *"Slidify a presentation on employment generation"*, or paste notes or a document.
-- Or call the agent directly: *"Use the slidify agent to make a deck on â€¦"*.
+- Or call the agent directly: *"Use the slidify agent to make a deck on …"*.
 
 Decks are saved to `Documents\Slidify` unless you name another folder.
 
