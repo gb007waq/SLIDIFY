@@ -1,0 +1,33 @@
+{
+  "_help": "SLIDIFY font styles. A style with \"font\": null is shown as 'font coming soon' and can't be picked yet. To fill one in: set \"font\" to the font name as Windows shows it, \"file\" to the font file (a path, or fonts/<file> for a file in the fonts/ folder next to this one), \"index\" to 0 unless the file is a .ttc collection, and adjust the sizes if needed.",
+  "default": "neat1",
+  "styles": {
+    "neat1": {
+      "label": "Neat 1",
+      "font": "Nirmala Text",
+      "file": "C:/Windows/Fonts/Nirmala.ttc",
+      "index": 3,
+      "title_pt": 36,
+      "heading_pt": [24, 22],
+      "body_pt": [20, 18]
+    },
+    "neat2": {
+      "label": "Neat 2",
+      "font": null,
+      "file": null,
+      "index": 0,
+      "title_pt": 36,
+      "heading_pt": [24, 22],
+      "body_pt": [20, 18]
+    },
+    "neat3": {
+      "label": "Neat 3",
+      "font": null,
+      "file": null,
+      "index": 0,
+      "title_pt": 36,
+      "heading_pt": [24, 22],
+      "body_pt": [20, 18]
+    }
+  }
+}

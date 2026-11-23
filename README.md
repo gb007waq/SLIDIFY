@@ -42,6 +42,7 @@ A web page on your computer for making decks without typing in Claude Code.
 
 - **Put in:** a topic or notes (typed or spoken), plus Word (.docx), PDF, pictures or text files
 - **Speak:** press Speak, say what the presentation is about in any of 54 languages (English, Urdu, Punjabi, Sindhi, Persian, Arabic and more), press Stop. It makes the slides in English (needs Chrome or Edge)
+- **Font style:** Neat 1 (Nirmala Text, 36 / 22-24 / 18-20 pt). Neat 2 and Neat 3 are ready for fonts to be added in `skills/slidify/fonts.json`
 - **Slides:** 12 (standard), fewer than 12, 15 to 20, or any custom number up to 99 (long presentations are planned first, then written 40 slides at a time)
 - **Get out:** PowerPoint, PDF, slide pictures (.zip) and Word, with a preview of every slide
 - **Change something:** type what to change ("merge slides 4 & 5") and it rebuilds the deck

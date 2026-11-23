@@ -119,6 +119,16 @@
   .speak .live { flex-basis: 100%; }
   @media (min-width: 420px) { .speak .live { flex-basis: auto; } }
   .hint { color: var(--grey-4); font-size: 13px; margin: 8px 0 0; }
+  .styles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .style-card { text-align: left; border: 1px solid var(--line); background: var(--bg); border-radius: 6px;
+                padding: 10px 12px; cursor: pointer; min-width: 0; }
+  .style-card:hover:not(:disabled) { border-color: var(--grey-3); }
+  .style-card.on { border-color: var(--grey-1); box-shadow: inset 0 0 0 1px var(--grey-1); }
+  .style-card:disabled { cursor: default; background: var(--wash); }
+  .style-card b { display: block; font-weight: 400; font-size: 15px; color: var(--grey-1); }
+  .style-card .aa { display: block; font-size: 26px; line-height: 1.2; color: var(--ink); margin: 2px 0; }
+  .style-card:disabled .aa { color: var(--grey-4); }
+  .style-card small { display: block; font-size: 12px; color: var(--grey-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   [hidden] { display: none !important; }
 </style>
 </head>
@@ -181,6 +191,9 @@
       <input type="number" id="customN" min="3" max="99" value="25" inputmode="numeric">
     </div>
     <p class="hint" id="countHint">Title, Sequence and THANK YOU slides are included in the count.</p>
+
+    <label class="title" id="stylesLabel">Font style</label>
+    <div class="styles" id="styles" role="radiogroup" aria-labelledby="stylesLabel"></div>
 
     <label class="check"><input type="checkbox" id="agenda" checked> Add a Sequence (agenda) slide</label>
 
@@ -261,6 +274,43 @@ function syncCount() {
 }
 ["slidesMode", "fewerN", "customN", "agenda"].forEach(id => $(id).addEventListener("input", syncCount));
 syncCount();
+
+// Font styles (Neat 1, Neat 2, Neat 3) from fonts.json
+let chosenStyle = null;
+function pickStyle(id) {
+  chosenStyle = id;
+  document.querySelectorAll(".style-card").forEach(b => {
+    const on = b.dataset.id === id;
+    b.classList.toggle("on", on);
+    b.setAttribute("aria-checked", on);
+  });
+  try { localStorage.setItem("slidify-style", id); } catch (_) {}
+}
+fetch("/api/styles").then(r => r.json()).then(({ default: def, styles }) => {
+  const box = $("styles");
+  styles.forEach(s => {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "style-card"; b.dataset.id = s.id;
+    b.setAttribute("role", "radio");
+    b.disabled = !s.ready;
+    b.innerHTML = `<b></b><span class="aa">Aa</span><small></small><small class="sizes"></small>`;
+    b.querySelector("b").textContent = s.label;
+    if (s.ready) {
+      b.querySelector(".aa").style.fontFamily = `"${s.font}", var(--font)`;
+      b.querySelector("small").textContent = s.font;
+      b.querySelector(".sizes").textContent = `${s.title_pt} · ${s.heading_pt.slice().reverse().join("-")} · ${s.body_pt.slice().reverse().join("-")} pt`;
+      b.title = `${s.font}: title ${s.title_pt} pt, headings ${s.heading_pt.slice().reverse().join("-")} pt, body ${s.body_pt.slice().reverse().join("-")} pt`;
+    } else {
+      b.querySelector("small").textContent = "Font coming soon";
+    }
+    b.onclick = () => pickStyle(s.id);
+    box.appendChild(b);
+  });
+  let saved = null;
+  try { saved = localStorage.getItem("slidify-style"); } catch (_) {}
+  const ok = (id) => styles.some(s => s.id === id && s.ready);
+  pickStyle(ok(saved) ? saved : def);
+}).catch(() => { $("styles").textContent = "Font styles unavailable - using Neat 1."; });
 
 // Speaking languages (slides are always written in English)
 const LANGS = [
@@ -506,6 +556,7 @@ $("form").onsubmit = async (e) => {
   fd.append("slides_mode", count.mode);
   fd.append("slides_n", count.n);
   fd.append("spoken", spoken ? "true" : "false");
+  if (chosenStyle) fd.append("style", chosenStyle);
   fd.append("agenda", $("agenda").checked ? "true" : "false");
   picked.forEach(f => fd.append("files", f));
   if (!$("brief").value.trim() && !picked.length) { $("error").textContent = "Write a topic or add a file."; return; }
