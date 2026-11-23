@@ -1,4 +1,4 @@
-# SLIDIFY
+﻿# SLIDIFY
 
 A Claude Code agent that makes PowerPoint presentations in one signature style, taken from the owner's reference deck.
 
@@ -32,7 +32,7 @@ The full guide is in [skills/slidify/STYLE.md](skills/slidify/STYLE.md). The bui
 ## Use
 
 - Ask: *"Slidify a presentation on employment generation"*, or paste notes or a document.
-- Or call the agent directly: *"Use the slidify agent to make a deck on …"*.
+- Or call the agent directly: *"Use the slidify agent to make a deck on â€¦"*.
 
 Decks are saved to `Documents\Slidify` unless you name another folder.
 
@@ -42,7 +42,7 @@ A web page on your computer for making decks without typing in Claude Code.
 
 - **Put in:** a topic or notes (typed or spoken), plus Word (.docx), PDF, pictures or text files
 - **Speak:** press Speak, say what the presentation is about in any of 54 languages (English, Urdu, Punjabi, Sindhi, Persian, Arabic and more), press Stop. It makes the slides in English (needs Chrome or Edge)
-- **Font style:** Neat 1 (Nirmala Text, 36 / 22-24 / 18-20 pt). Neat 2 and Neat 3 are ready for fonts to be added in `skills/slidify/fonts.json`
+- **Font style:** Neat 1 (Nirmala Text, 36 / 22-24 / 18-20 pt). Neat 2 (Candara) and Neat 3 (Avenir Next LT Pro), same sizes. Fonts are set in `skills/slidify/fonts.json`
 - **Slides:** 12 (standard), fewer than 12, 15 to 20, or any custom number up to 99 (long presentations are planned first, then written 40 slides at a time)
 - **Get out:** PowerPoint, PDF, slide pictures (.zip) and Word, with a preview of every slide
 - **Change something:** type what to change ("merge slides 4 & 5") and it rebuilds the deck

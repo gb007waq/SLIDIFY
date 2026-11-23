@@ -13,8 +13,8 @@
     },
     "neat2": {
       "label": "Neat 2",
-      "font": null,
-      "file": null,
+      "font": "Candara",
+      "file": "C:/Windows/Fonts/Candara.ttf",
       "index": 0,
       "title_pt": 36,
       "heading_pt": [24, 22],
@@ -22,8 +22,14 @@
     },
     "neat3": {
       "label": "Neat 3",
-      "font": null,
-      "file": null,
+      "font": "Avenir Next LT Pro",
+      "file": [
+        "fonts/AvenirNextLTPro-Regular.otf",
+        "fonts/AvenirNextLTPro-Regular.ttf",
+        "C:/Windows/Fonts/AvenirNextLTPro-Regular.otf",
+        "%LOCALAPPDATA%/Microsoft/Windows/Fonts/AvenirNextLTPro-Regular.otf"
+      ],
+      "fallback_file": "C:/Windows/Fonts/segoeui.ttf",
       "index": 0,
       "title_pt": 36,
       "heading_pt": [24, 22],

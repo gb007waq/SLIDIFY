@@ -417,6 +417,7 @@ def styles_list():
     default, styles = bd.load_styles()
     return jsonify(default=default, styles=[
         {"id": k, "label": v.get("label", k), "font": v.get("font"), "ready": bd.style_ready(v),
+         "stand_in": bd.style_ready(v) and bd.style_file(v)[1],
          "title_pt": v.get("title_pt"), "heading_pt": v.get("heading_pt"), "body_pt": v.get("body_pt")}
         for k, v in styles.items()])
 

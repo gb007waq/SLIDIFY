@@ -92,6 +92,25 @@ def style_ready(st):
     return bool(st.get("font"))
 
 
+def style_file(st):
+    """First font file that exists (file may be one path or a list), else the fallback.
+    Returns (path or None, is_fallback)."""
+    import os
+    files = st.get("file") or []
+    if isinstance(files, str):
+        files = [files]
+    for f in files:
+        p = Path(os.path.expandvars(f))
+        if not p.is_absolute():
+            p = SKILL_DIR / p
+        if p.exists():
+            return p, False
+    fb = st.get("fallback_file")
+    if fb and Path(os.path.expandvars(fb)).exists():
+        return Path(os.path.expandvars(fb)), True
+    return None, True
+
+
 @contextmanager
 def use_style(name=None):
     """Apply a font style (font, file and sizes) while building or checking a deck."""
@@ -105,10 +124,9 @@ def use_style(name=None):
         raise ValueError(f"{st.get('label', name)} has no font yet.")
     with _style_lock:
         saved = (FONT, FONT_FILE, FONT_INDEX, TITLE_PT, HEADING_SIZES, BODY_SIZES)
-        f = Path(st["file"]) if st.get("file") else None
-        if f is not None and not f.is_absolute():
-            f = SKILL_DIR / f
-        FONT, FONT_FILE, FONT_INDEX = st["font"], f, int(st.get("index", 0))
+        f, fallback = style_file(st)
+        FONT, FONT_FILE = st["font"], f
+        FONT_INDEX = 0 if fallback else int(st.get("index", 0))
         TITLE_PT = st.get("title_pt", TITLE_PT)
         HEADING_SIZES = tuple(st.get("heading_pt", HEADING_SIZES))
         BODY_SIZES = tuple(st.get("body_pt", BODY_SIZES))
