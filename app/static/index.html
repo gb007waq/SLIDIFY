@@ -5,220 +5,385 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SLIDIFY</title>
 <link rel="icon" href="/static/slidify-64.png">
+<link rel="apple-touch-icon" href="/static/slidify-512.png">
+<meta name="theme-color" content="#2b2b2b">
 <style>
   :root {
-    --ink: #000000;
-    --grey-1: #333333;
+    --ink: #0b0b0b;
+    --grey-1: #2b2b2b;
     --grey-2: #595959;
     --grey-3: #808080;
     --grey-4: #A6A6A6;
-    --line: #E3E3E3;
-    --wash: #F5F5F5;
-    --bg: #FFFFFF;
+    --line: #e4e4e4;
+    --line-2: #d6d6d6;
+    --wash: #f6f6f6;
+    --card: #ffffff;
+    --page: #eeeeee;
+    --shadow: 0 1px 2px rgba(0,0,0,.04), 0 14px 40px -18px rgba(0,0,0,.18);
+    --shadow-hi: 0 2px 6px rgba(0,0,0,.06), 0 22px 48px -18px rgba(0,0,0,.28);
+    --radius: 16px;
+    --ease: cubic-bezier(.2,.7,.2,1);
     --font: "Nirmala Text", "Nirmala UI", "Segoe UI", system-ui, sans-serif;
   }
   * { box-sizing: border-box; }
-  html, body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font); }
-  body { min-height: 100vh; }
+  html, body { margin: 0; color: var(--ink); font-family: var(--font); background: var(--page); }
+  body { min-height: 100vh; -webkit-font-smoothing: antialiased; }
   button, input, textarea, select { font: inherit; color: inherit; }
+  ::selection { background: #2b2b2b; color: #fff; }
 
-  header { padding: 28px 40px 0; display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; }
-  header h1 { margin: 0; font-weight: 400; font-size: 30px; letter-spacing: .14em; color: var(--grey-3); }
-  header p { margin: 0; color: var(--grey-4); font-size: 16px; }
+  /* soft lit background */
+  .bg { position: fixed; inset: 0; z-index: -1; pointer-events: none;
+        background:
+          radial-gradient(900px 500px at 8% -10%, #ffffff 0%, rgba(255,255,255,0) 60%),
+          radial-gradient(700px 500px at 100% 0%, #f7f7f7 0%, rgba(247,247,247,0) 60%),
+          linear-gradient(180deg, #f2f2f2 0%, #e9e9e9 100%); }
 
-  main { display: grid; grid-template-columns: minmax(300px, 400px) 1fr; gap: 40px; padding: 28px 40px 48px; }
-  @media (max-width: 860px) {
-    header { padding: 20px 16px 0; }
-    main { grid-template-columns: 1fr; padding: 20px 16px 40px; gap: 28px; }
-  }
+  /* top bar */
+  .top { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
+         padding: 14px 40px; background: rgba(250,250,250,.72); backdrop-filter: saturate(1.4) blur(14px);
+         -webkit-backdrop-filter: saturate(1.4) blur(14px); border-bottom: 1px solid rgba(0,0,0,.06); }
+  .brand { display: flex; align-items: center; gap: 12px; text-decoration: none; }
+  .brand svg { width: 38px; height: 38px; filter: drop-shadow(0 4px 10px rgba(0,0,0,.18)); transition: transform .5s var(--ease); }
+  .brand:hover svg { transform: rotate(-6deg) scale(1.05); }
+  .word { font-size: 22px; letter-spacing: .32em; color: var(--grey-1); padding-left: .1em; }
+  .tag { margin: 0; color: var(--grey-3); font-size: 14px; padding: 5px 12px; border: 1px solid var(--line);
+         border-radius: 999px; background: rgba(255,255,255,.6); }
 
-  .panel h2, .result h2 { margin: 0 0 14px; font-weight: 400; font-size: 22px; color: var(--grey-4); }
-  label.title { display: block; font-size: 14px; color: var(--grey-3); margin: 18px 0 6px; }
+  main { display: grid; grid-template-columns: minmax(320px, 430px) 1fr; gap: 28px; padding: 28px 40px 56px;
+         max-width: 1500px; margin: 0 auto; align-items: start; }
+  .card { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); border: 1px solid rgba(0,0,0,.04); }
+  .actions { position: sticky; bottom: -22px; margin: 0 -24px -22px; padding: 4px 24px 22px; z-index: 2;
+             background: linear-gradient(180deg, rgba(255,255,255,0), #fff 22px); }
+  .panel { padding: 24px 24px 22px; position: sticky; top: 84px; max-height: calc(100vh - 104px); overflow: auto;
+           scrollbar-width: thin; animation: rise .6s var(--ease) both; }
+  .result { padding: 24px; min-width: 0; position: relative; overflow: hidden; animation: rise .6s .08s var(--ease) both; }
+  @keyframes rise { from { opacity: 0; transform: translateY(14px); } }
+
+  .panel h2, .result h2 { margin: 0; font-weight: 400; font-size: 22px; color: var(--grey-1); }
+  .sec { padding: 18px 0 4px; border-top: 1px solid var(--line); margin-top: 18px; }
+  .sec:first-of-type { border-top: 0; margin-top: 8px; padding-top: 8px; }
+  .sec-h { display: flex; align-items: center; gap: 10px; font-size: 13px; letter-spacing: .08em; text-transform: uppercase;
+           color: var(--grey-3); margin-bottom: 10px; }
+  .sec-h em { font-style: normal; text-transform: none; letter-spacing: 0; color: var(--grey-4); }
+  .num { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; letter-spacing: 0;
+         background: var(--grey-1); color: #fff; }
+
+  label.title { display: block; font-size: 13px; color: var(--grey-3); margin: 14px 0 6px; }
   textarea, input[type=text], input[type=number], select {
-    width: 100%; border: 1px solid var(--line); border-radius: 6px; background: var(--bg);
-    padding: 10px 12px; font-size: 16px; outline: none;
-  }
-  textarea:focus, input:focus, select:focus { border-color: var(--grey-3); }
-  .speak select { width: auto; }
-  textarea { min-height: 120px; resize: vertical; line-height: 1.5; }
+    width: 100%; border: 1px solid var(--line); border-radius: 10px; background: #fbfbfb;
+    padding: 10px 12px; font-size: 16px; outline: none; transition: border-color .2s, box-shadow .2s, background .2s; }
+  textarea:hover, input:hover, select:hover { border-color: var(--line-2); }
+  textarea:focus, input:focus, select:focus { border-color: var(--grey-2); background: #fff; box-shadow: 0 0 0 4px rgba(43,43,43,.08); }
+  textarea { min-height: 116px; resize: vertical; line-height: 1.55; }
 
-  .drop {
-    border: 1px dashed var(--grey-4); border-radius: 6px; padding: 22px 16px; text-align: center;
-    color: var(--grey-3); cursor: pointer; transition: background .15s, border-color .15s;
-  }
-  .drop.over { background: var(--wash); border-color: var(--grey-2); }
+  /* speak */
+  .speak { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .speak select { width: auto; flex: 1 1 160px; padding: 9px 10px; font-size: 15px; }
+  .mic { position: relative; display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--grey-1);
+         background: #fff; color: var(--grey-1); border-radius: 999px; padding: 9px 18px; cursor: pointer; font-size: 15px;
+         transition: background .2s, color .2s, transform .15s, box-shadow .2s; }
+  .mic:hover { box-shadow: 0 6px 16px -8px rgba(0,0,0,.4); transform: translateY(-1px); }
+  .mic:active { transform: scale(.97); }
+  .mic:disabled { opacity: .5; cursor: default; transform: none; box-shadow: none; }
+  .mic.on { background: var(--grey-1); color: #fff; }
+  .mic.on::before, .mic.on::after { content: ""; position: absolute; inset: -1px; border-radius: inherit;
+         border: 2px solid var(--grey-1); animation: ring 1.6s var(--ease) infinite; }
+  .mic.on::after { animation-delay: .8s; }
+  @keyframes ring { from { opacity: .55; transform: scale(1); } to { opacity: 0; transform: scale(1.45); } }
+  .live { display: inline-flex; align-items: center; gap: 4px; color: var(--grey-2); font-size: 13px; }
+  .bars { display: inline-flex; gap: 2px; align-items: center; height: 14px; margin-right: 4px; }
+  .bars i { width: 3px; height: 100%; border-radius: 2px; background: var(--grey-1); animation: eq 1s ease-in-out infinite; }
+  .bars i:nth-child(2) { animation-delay: .15s; } .bars i:nth-child(3) { animation-delay: .3s; } .bars i:nth-child(4) { animation-delay: .45s; }
+  @keyframes eq { 0%, 100% { transform: scaleY(.3); } 50% { transform: scaleY(1); } }
+  .check { display: flex; align-items: center; gap: 10px; margin-top: 14px; color: var(--grey-1); cursor: pointer; font-size: 15px; }
+  .check input { width: 18px; height: 18px; accent-color: var(--grey-1); }
+  .check.small { font-size: 13px; color: var(--grey-2); margin-top: 10px; }
+  .check.small input { width: 16px; height: 16px; }
+  .interim { color: var(--grey-4); font-size: 14px; min-height: 1.2em; margin-top: 6px; font-style: italic; }
+  .said { font-size: 14px; color: var(--grey-2); background: var(--wash); border-left: 3px solid var(--grey-4);
+          border-radius: 8px; padding: 8px 12px; margin-top: 4px; animation: rise .4s var(--ease) both; }
+  .said span { color: var(--grey-4); margin-right: 4px; }
+
+  /* drop zone */
+  .drop { display: flex; align-items: center; gap: 14px; border: 1.5px dashed var(--line-2); border-radius: 12px;
+          padding: 16px; color: var(--grey-3); cursor: pointer; background: #fcfcfc;
+          transition: background .2s, border-color .2s, transform .2s; }
+  .drop:hover, .drop:focus-visible { border-color: var(--grey-3); background: #fff; outline: none; }
+  .drop.over { background: var(--wash); border-color: var(--grey-1); transform: scale(1.01); }
+  .drop svg { flex: none; width: 34px; height: 34px; color: var(--grey-2); transition: transform .3s var(--ease); }
+  .drop:hover svg, .drop.over svg { transform: translateY(-3px); }
   .drop strong { color: var(--grey-1); font-weight: 400; }
-  .drop small { display: block; margin-top: 4px; color: var(--grey-4); }
+  .drop small { display: block; margin-top: 2px; color: var(--grey-4); font-size: 12px; }
   .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
-  .chip { display: inline-flex; align-items: center; gap: 8px; background: var(--wash); border-radius: 14px;
-          padding: 4px 6px 4px 12px; font-size: 14px; color: var(--grey-1); max-width: 100%; }
+  .chip { display: inline-flex; align-items: center; gap: 8px; background: var(--wash); border: 1px solid var(--line);
+          border-radius: 999px; padding: 4px 6px 4px 12px; font-size: 13px; color: var(--grey-1); max-width: 100%;
+          animation: pop .3s var(--ease) both; }
+  @keyframes pop { from { opacity: 0; transform: scale(.9); } }
   .chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .chip button { border: 0; background: none; cursor: pointer; color: var(--grey-3); font-size: 16px; line-height: 1; padding: 2px 6px; }
+  .chip button { border: 0; background: none; cursor: pointer; color: var(--grey-3); font-size: 16px; line-height: 1;
+                 padding: 2px 6px; border-radius: 50%; }
+  .chip button:hover { background: #e9e9e9; color: var(--ink); }
 
   .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  .check { display: flex; align-items: center; gap: 10px; margin-top: 18px; color: var(--grey-1); cursor: pointer; }
-  .check input { width: 18px; height: 18px; accent-color: var(--grey-1); }
+  .hint { color: var(--grey-4); font-size: 12px; margin: 8px 0 0; }
 
-  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border-radius: 6px;
-         padding: 11px 20px; cursor: pointer; font-size: 16px; text-decoration: none; transition: background .15s; }
-  .btn.primary { width: 100%; margin-top: 24px; background: var(--grey-1); color: #fff; border: 1px solid var(--grey-1); }
-  .btn.primary:hover { background: #000; }
-  .btn.primary:disabled { background: var(--grey-4); border-color: var(--grey-4); cursor: default; }
-  .btn.ghost { background: var(--bg); color: var(--grey-1); border: 1px solid var(--line); }
-  .btn.ghost:hover { border-color: var(--grey-3); }
+  /* font style cards */
+  .styles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .style-card { position: relative; text-align: left; border: 1px solid var(--line); background: #fff; border-radius: 12px;
+                padding: 10px 12px 11px; cursor: pointer; min-width: 0;
+                transition: border-color .2s, box-shadow .2s, transform .2s var(--ease); }
+  .style-card:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 10px 22px -14px rgba(0,0,0,.45); }
+  .style-card.on { border-color: var(--grey-1); box-shadow: inset 0 0 0 1px var(--grey-1); }
+  .style-card.on::after { content: ""; position: absolute; top: 9px; right: 9px; width: 16px; height: 16px; border-radius: 50%;
+                          background: var(--grey-1) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 8.2l2.6 2.6L12 5.4' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/12px no-repeat;
+                          animation: pop .25s var(--ease) both; }
+  .style-card:disabled { cursor: default; background: var(--wash); }
+  .style-card b { display: block; font-weight: 400; font-size: 14px; color: var(--grey-2); }
+  .style-card .aa { display: block; font-size: 28px; line-height: 1.2; color: var(--ink); margin: 2px 0 3px; }
+  .style-card:disabled .aa { color: var(--grey-4); }
+  .style-card small { display: block; font-size: 11.5px; line-height: 1.35; color: var(--grey-3); overflow-wrap: anywhere; }
+
+  /* buttons */
+  .btn { position: relative; overflow: hidden; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+         border-radius: 10px; padding: 10px 16px; cursor: pointer; font-size: 15px; text-decoration: none;
+         transition: background .2s, border-color .2s, transform .15s, box-shadow .2s; }
+  .btn svg { width: 17px; height: 17px; flex: none; }
+  .btn.primary { width: 100%; margin-top: 22px; padding: 14px 20px; font-size: 16px; color: #fff; border: 0;
+                 background: linear-gradient(180deg, #3a3a3a 0%, #151515 100%);
+                 box-shadow: 0 10px 24px -10px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.12); }
+  .btn.primary::after { content: ""; position: absolute; top: 0; bottom: 0; width: 40%; left: -60%;
+                        background: linear-gradient(100deg, transparent, rgba(255,255,255,.22), transparent);
+                        transform: skewX(-20deg); transition: left .7s var(--ease); }
+  .btn.primary:hover:not(:disabled)::after { left: 120%; }
+  .btn.primary:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 16px 30px -12px rgba(0,0,0,.65), inset 0 1px 0 rgba(255,255,255,.12); }
+  .btn.primary:active:not(:disabled) { transform: scale(.985); }
+  .btn.primary:disabled { background: linear-gradient(180deg, #8c8c8c, #6e6e6e); cursor: default; box-shadow: none; }
+  .btn.primary .dot { display: none; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,.35);
+                      border-top-color: #fff; border-radius: 50%; animation: spin .8s linear infinite; }
+  .btn.primary.loading .dot { display: inline-block; }
+  .btn.ghost { background: #fff; color: var(--grey-1); border: 1px solid var(--line); }
+  .btn.ghost:hover { border-color: var(--grey-3); transform: translateY(-1px); box-shadow: 0 8px 18px -12px rgba(0,0,0,.45); }
+  .btn.ghost:disabled { opacity: .5; cursor: default; transform: none; box-shadow: none; }
   .error { color: #8a1f1f; font-size: 14px; margin-top: 10px; min-height: 1em; }
+  .error:not(:empty) { background: #fbf1f1; border: 1px solid #f0d6d6; border-radius: 8px; padding: 8px 12px; animation: rise .3s var(--ease) both; }
 
-  .result { min-width: 0; }
-  .empty { border: 1px solid var(--line); border-radius: 8px; aspect-ratio: 16/9; max-width: 760px;
-           display: grid; place-items: center; text-align: center; color: var(--grey-4); padding: 24px; }
-  .empty div { font-size: 22px; }
-  .empty small { display: block; font-size: 15px; margin-top: 6px; }
-
-  .status { display: flex; align-items: center; gap: 12px; color: var(--grey-2); margin-bottom: 18px; min-height: 24px; }
-  .spinner { width: 18px; height: 18px; border: 2px solid var(--line); border-top-color: var(--grey-2);
-             border-radius: 50%; animation: spin .9s linear infinite; flex: none; }
+  /* result area */
+  .progress { position: absolute; top: 0; left: 0; right: 0; height: 3px; overflow: hidden; background: #ececec; }
+  .progress i { position: absolute; inset: 0 auto 0 0; width: 35%; background: linear-gradient(90deg, transparent, var(--grey-1), transparent);
+                animation: slide 1.3s ease-in-out infinite; }
+  @keyframes slide { from { left: -35%; } to { left: 100%; } }
+  .result-h { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+  .meta { color: var(--grey-4); font-size: 13px; margin-top: 4px; min-height: 1em; }
+  .status { display: inline-flex; align-items: center; gap: 10px; color: var(--grey-2); margin-bottom: 16px; font-size: 14px;
+            padding: 7px 14px 7px 10px; border-radius: 999px; background: var(--wash); border: 1px solid var(--line);
+            animation: rise .3s var(--ease) both; }
+  .spinner { width: 16px; height: 16px; border: 2px solid var(--line-2); border-top-color: var(--grey-1);
+             border-radius: 50%; animation: spin .8s linear infinite; flex: none; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
-  .downloads { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 22px; }
-  .downloads .new { margin-left: auto; color: var(--grey-3); }
-  .toast { display: flex; align-items: center; gap: 14px; background: var(--grey-1); color: #fff; border-radius: 6px;
-           padding: 10px 14px; margin-bottom: 18px; font-size: 15px; max-width: 760px; }
-  .toast button { margin-left: auto; background: none; border: 1px solid rgba(255,255,255,.5); color: #fff;
-                  border-radius: 4px; padding: 5px 12px; cursor: pointer; font-size: 14px; }
-  .toast button:hover { background: rgba(255,255,255,.12); }
-  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
-  .thumb { position: relative; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; cursor: zoom-in; background: #fff; padding: 0; }
+  .empty { position: relative; border: 1px dashed var(--line-2); border-radius: 14px; aspect-ratio: 16/8; max-width: 860px;
+           display: grid; place-items: center; text-align: center; color: var(--grey-3); padding: 24px; overflow: hidden;
+           background: radial-gradient(500px 240px at 50% 40%, #fff, #fafafa); }
+  .stack { position: relative; width: 210px; height: 128px; margin: 0 auto 22px; }
+  .stack span { position: absolute; inset: 0; border-radius: 8px; background: #fff; border: 1px solid var(--line);
+                box-shadow: 0 12px 26px -16px rgba(0,0,0,.45); animation: float 5s ease-in-out infinite; }
+  .stack span:nth-child(1) { transform: rotate(-8deg) translate(-26px, 6px); animation-delay: -1s; opacity: .7; }
+  .stack span:nth-child(2) { transform: rotate(5deg) translate(24px, 2px); animation-delay: -2.5s; opacity: .85; }
+  .stack span:nth-child(3) { padding: 16px 18px; }
+  .stack span:nth-child(3) b { display: block; height: 7px; width: 42%; border-radius: 4px; background: #cfcfcf; margin-bottom: 18px; }
+  .stack span:nth-child(3) i { display: block; height: 6px; border-radius: 4px; background: #2b2b2b; margin-bottom: 11px; opacity: .85; }
+  .stack span:nth-child(3) i:nth-of-type(2) { width: 78%; } .stack span:nth-child(3) i:nth-of-type(3) { width: 62%; }
+  @keyframes float { 50% { translate: 0 -6px; } }
+  .empty h3 { margin: 0; font-weight: 400; font-size: 21px; color: var(--grey-1); }
+  .empty p { margin: 6px 0 0; font-size: 14px; color: var(--grey-3); }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 16px; }
+  .thumb { position: relative; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; cursor: zoom-in;
+           background: #fff; padding: 0; box-shadow: 0 1px 2px rgba(0,0,0,.04);
+           animation: thumbIn .55s var(--ease) both; animation-delay: calc(var(--i, 0) * 45ms);
+           transition: transform .25s var(--ease), box-shadow .25s, border-color .25s; }
+  @keyframes thumbIn { from { opacity: 0; transform: translateY(12px) scale(.97); } }
+  .thumb:hover, .thumb:focus-visible { transform: translateY(-4px); box-shadow: var(--shadow-hi); border-color: var(--line-2); outline: none; }
   .thumb img { display: block; width: 100%; aspect-ratio: 16/9; object-fit: cover; }
-  .thumb span { position: absolute; left: 8px; bottom: 6px; font-size: 12px; color: var(--grey-4); }
+  .thumb span { position: absolute; left: 8px; bottom: 8px; font-size: 11px; color: #fff; background: rgba(30,30,30,.72);
+                padding: 2px 8px; border-radius: 999px; backdrop-filter: blur(4px); }
+  .thumb::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 60%, rgba(0,0,0,.05)); pointer-events: none; }
 
-  .revise { margin-top: 28px; max-width: 760px; }
-  .revise .bar { display: flex; gap: 10px; margin-top: 8px; }
-  .revise textarea { min-height: 70px; }
+  .skeleton { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 16px; }
+  .skeleton div { aspect-ratio: 16/9; border-radius: 10px; border: 1px solid var(--line);
+                  background: linear-gradient(100deg, #f3f3f3 20%, #fbfbfb 40%, #f3f3f3 60%) 0 0 / 300% 100%;
+                  animation: shimmer 1.4s linear infinite; }
+  @keyframes shimmer { to { background-position: -150% 0; } }
 
-  .lightbox { position: fixed; inset: 0; background: rgba(40,40,40,.88); display: none; place-items: center; padding: 24px; z-index: 10; }
-  .lightbox.open { display: grid; }
-  .lightbox img { max-width: min(1400px, 100%); max-height: 86vh; background: #fff; box-shadow: 0 10px 40px rgba(0,0,0,.4); }
+  .downloads { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; animation: rise .45s var(--ease) both; }
+  .downloads .new { margin-left: auto; }
+
+  .revise { margin-top: 26px; max-width: 860px; padding: 16px; border-radius: 12px; background: var(--wash); border: 1px solid var(--line);
+            animation: rise .45s var(--ease) both; }
+  .revise label.title { margin-top: 0; }
+  .revise .bar { display: flex; gap: 10px; margin-top: 10px; justify-content: flex-end; }
+  .revise textarea { min-height: 70px; background: #fff; }
+
+  /* toast */
+  .toast { position: fixed; left: 50%; bottom: 24px; z-index: 20; display: flex; align-items: center; gap: 16px;
+           background: rgba(28,28,28,.92); color: #fff; border-radius: 14px; padding: 12px 12px 12px 18px; font-size: 14px;
+           box-shadow: 0 20px 40px -14px rgba(0,0,0,.55); backdrop-filter: blur(8px); max-width: calc(100vw - 32px);
+           transform: translateX(-50%); animation: toastIn .45s var(--ease) both; }
+  @keyframes toastIn { from { opacity: 0; transform: translate(-50%, 20px); } }
+  .toast button { background: #fff; color: var(--ink); border: 0; border-radius: 8px; padding: 7px 14px; cursor: pointer;
+                  font-size: 13px; white-space: nowrap; transition: transform .15s; }
+  .toast button:hover { transform: translateY(-1px); }
+
+  /* lightbox */
+  .lightbox { position: fixed; inset: 0; background: rgba(20,20,20,.82); backdrop-filter: blur(6px); display: none;
+              place-items: center; padding: 24px; z-index: 30; }
+  .lightbox.open { display: grid; animation: fade .25s ease both; }
+  .lightbox.open img { animation: zoomIn .35s var(--ease) both; }
+  @keyframes fade { from { opacity: 0; } }
+  @keyframes zoomIn { from { opacity: 0; transform: scale(.96); } }
+  .lightbox img { max-width: min(1400px, 100%); max-height: 84vh; background: #fff; border-radius: 6px; box-shadow: 0 30px 80px rgba(0,0,0,.5); }
   .lightbox .nav { position: fixed; top: 50%; transform: translateY(-50%); border: 0; background: rgba(255,255,255,.12);
-                   color: #fff; font-size: 28px; width: 48px; height: 48px; border-radius: 50%; cursor: pointer; }
-  .lightbox .prev { left: 16px; } .lightbox .next { right: 16px; }
-  .lightbox .close { position: fixed; top: 14px; right: 18px; border: 0; background: none; color: #fff; font-size: 30px; cursor: pointer; }
-  .speak { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
-  .mic { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--grey-1); background: var(--bg);
-         color: var(--grey-1); border-radius: 22px; padding: 9px 18px; cursor: pointer; font-size: 16px; }
-  .mic:hover { background: var(--wash); }
-  .mic.on { background: var(--grey-1); color: #fff; }
-  .speak select { width: auto; padding: 8px 10px; font-size: 15px; }
-  .live { display: inline-flex; align-items: center; gap: 8px; color: var(--grey-2); font-size: 14px; }
-  .live i { width: 9px; height: 9px; border-radius: 50%; background: var(--grey-1); animation: pulse 1s ease-in-out infinite; }
-  @keyframes pulse { 50% { opacity: .2; } }
-  .check.small { font-size: 14px; color: var(--grey-2); margin-top: 10px; }
-  .check.small input { width: 16px; height: 16px; }
-  .interim { color: var(--grey-4); font-size: 14px; min-height: 1.2em; margin-top: 6px; }
-  .said { font-size: 14px; color: var(--grey-2); background: var(--wash); border-radius: 6px; padding: 8px 10px; margin-top: 4px; }
-  .said span { color: var(--grey-4); margin-right: 4px; }
-  .speak .live { flex-basis: 100%; }
-  @media (min-width: 420px) { .speak .live { flex-basis: auto; } }
-  .hint { color: var(--grey-4); font-size: 13px; margin: 8px 0 0; }
-  .styles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-  .style-card { text-align: left; border: 1px solid var(--line); background: var(--bg); border-radius: 6px;
-                padding: 10px 12px; cursor: pointer; min-width: 0; }
-  .style-card:hover:not(:disabled) { border-color: var(--grey-3); }
-  .style-card.on { border-color: var(--grey-1); box-shadow: inset 0 0 0 1px var(--grey-1); }
-  .style-card:disabled { cursor: default; background: var(--wash); }
-  .style-card b { display: block; font-weight: 400; font-size: 15px; color: var(--grey-1); }
-  .style-card .aa { display: block; font-size: 26px; line-height: 1.2; color: var(--ink); margin: 2px 0; }
-  .style-card:disabled .aa { color: var(--grey-4); }
-  .style-card small { display: block; font-size: 12px; line-height: 1.35; color: var(--grey-3); overflow-wrap: anywhere; }
+                   color: #fff; font-size: 28px; width: 50px; height: 50px; border-radius: 50%; cursor: pointer; transition: background .2s; }
+  .lightbox .nav:hover { background: rgba(255,255,255,.24); }
+  .lightbox .prev { left: 18px; } .lightbox .next { right: 18px; }
+  .lightbox .close { position: fixed; top: 14px; right: 18px; border: 0; background: rgba(255,255,255,.12); color: #fff;
+                     width: 42px; height: 42px; border-radius: 50%; font-size: 24px; cursor: pointer; }
+  .lightbox .count { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); color: rgba(255,255,255,.75); font-size: 13px; }
+
+  @media (max-width: 960px) {
+    .top { padding: 12px 16px; }
+    .tag { display: none; }
+    main { grid-template-columns: 1fr; padding: 16px 16px 48px; gap: 18px; }
+    .panel { position: static; max-height: none; padding: 20px 18px; }
+    .actions { position: static; margin: 0; padding: 0; background: none; }
+    .result { padding: 20px 16px; }
+    .empty { aspect-ratio: auto; padding: 36px 16px; }
+    .downloads .new { margin-left: 0; }
+  }
+  @media (max-width: 420px) { .styles { grid-template-columns: 1fr 1fr 1fr; gap: 6px; } .style-card { padding: 8px; } .style-card .aa { font-size: 22px; } }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+  }
   [hidden] { display: none !important; }
 </style>
 </head>
 <body>
-<header>
-  <h1>SLIDIFY</h1>
-  <p>Signature presentations from a topic, a Word file, a PDF or pictures</p>
+<div class="bg" aria-hidden="true"></div>
+
+<header class="top">
+  <a class="brand" href="/" aria-label="SLIDIFY home">
+    <svg viewBox="0 0 64 64" aria-hidden="true">
+      <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3d3d3d"/><stop offset="1" stop-color="#121212"/></linearGradient></defs>
+      <rect width="64" height="64" rx="15" fill="url(#g)"/>
+      <rect x="15" y="15" width="34" height="22" rx="3" fill="#8f8f8f" transform="rotate(-8 32 26)"/>
+      <rect x="13" y="21" width="38" height="25" rx="3.5" fill="#fff"/>
+      <rect x="18" y="26" width="12" height="2.6" rx="1.3" fill="#b5b5b5"/>
+      <rect x="18" y="32" width="26" height="2.6" rx="1.3" fill="#2b2b2b"/>
+      <rect x="18" y="37.5" width="19" height="2.6" rx="1.3" fill="#2b2b2b"/>
+    </svg>
+    <span class="word">SLIDIFY</span>
+  </a>
+  <p class="tag">Signature presentations from a topic, your voice, Word, PDF or pictures</p>
 </header>
 
 <main>
-  <form class="panel" id="form" autocomplete="off">
+  <form class="panel card" id="form" autocomplete="off">
     <h2>New presentation</h2>
 
-    <label class="title" for="lang">I'm speaking</label>
-    <div class="speak" id="speakBox">
-      <select id="lang" aria-label="Language you are speaking"></select>
-      <button class="mic" id="mic" type="button" aria-pressed="false">
-        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-2.08A7 7 0 0 0 19 12h-2Z"/></svg>
-        <span id="micLabel">Speak</span>
-      </button>
-      <span class="live" id="live" hidden><i></i>Listening...</span>
-    </div>
-    <label class="check small"><input type="checkbox" id="autoMake" checked> Make the presentation when I stop speaking</label>
-    <div class="error" id="micNote"></div>
-
-    <label class="title" for="brief">Topic, notes or instructions</label>
-    <textarea id="brief" name="brief" placeholder="Type here, or press Speak and say what the presentation is about"></textarea>
-    <div class="interim" id="interim"></div>
-    <div class="said" id="said" hidden><span>You said</span> <bdi id="saidText"></bdi></div>
-
-    <label class="title">Source files</label>
-    <div class="drop" id="drop" tabindex="0" role="button" aria-label="Add Word, PDF or picture files">
-      <strong>Drop files here</strong> or click to choose
-      <small>Word (.docx) · PDF · Pictures (.png .jpg .webp) · Text</small>
-    </div>
-    <input type="file" id="files" multiple accept=".docx,.pdf,.png,.jpg,.jpeg,.webp,.gif,.txt,.md" hidden>
-    <div class="chips" id="chips"></div>
-
-    <div class="row">
-      <div>
-        <label class="title" for="date">Date on title slide</label>
-        <input type="text" id="date" name="date">
+    <section class="sec">
+      <div class="sec-h"><span class="num">1</span>Tell SLIDIFY</div>
+      <div class="speak" id="speakBox">
+        <select id="lang" aria-label="Language you are speaking"></select>
+        <button class="mic" id="mic" type="button" aria-pressed="false">
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-2.08A7 7 0 0 0 19 12h-2Z"/></svg>
+          <span id="micLabel">Speak</span>
+        </button>
+        <span class="live" id="live" hidden><span class="bars"><i></i><i></i><i></i><i></i></span>Listening</span>
       </div>
-      <div>
-        <label class="title" for="slidesMode">Number of slides</label>
-        <select id="slidesMode">
-          <option value="standard">12 slides (standard)</option>
-          <option value="fewer">Fewer than 12</option>
-          <option value="long">15 to 20 slides</option>
-          <option value="custom">Custom number</option>
-        </select>
+      <label class="check small"><input type="checkbox" id="autoMake" checked> Make the presentation when I stop speaking</label>
+      <div class="error" id="micNote"></div>
+
+      <label class="title" for="brief">Topic, notes or instructions</label>
+      <textarea id="brief" name="brief" placeholder="Type here, or press Speak and say what the presentation is about"></textarea>
+      <div class="interim" id="interim"></div>
+      <div class="said" id="said" hidden><span>You said</span> <bdi id="saidText"></bdi></div>
+    </section>
+
+    <section class="sec">
+      <div class="sec-h"><span class="num">2</span>Add files <em>optional</em></div>
+      <div class="drop" id="drop" tabindex="0" role="button" aria-label="Add Word, PDF or picture files">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 18a4.5 4.5 0 0 1-.6-8.96A6 6 0 0 1 18 8.5a4 4 0 0 1-.5 9.5"/><path d="M12 12v8"/><path d="m8.8 15 3.2-3.2 3.2 3.2"/></svg>
+        <div><strong>Drop files here</strong> or click to choose
+          <small>Word (.docx) · PDF · Pictures (.png .jpg .webp) · Text</small></div>
       </div>
-    </div>
-    <div id="fewerBox" hidden>
-      <label class="title" for="fewerN">How many slides</label>
-      <select id="fewerN"></select>
-    </div>
-    <div id="customBox" hidden>
-      <label class="title" for="customN">How many slides (3 to 99)</label>
-      <input type="number" id="customN" min="3" max="99" value="25" inputmode="numeric">
-    </div>
-    <p class="hint" id="countHint">Title, Sequence and THANK YOU slides are included in the count.</p>
+      <input type="file" id="files" multiple accept=".docx,.pdf,.png,.jpg,.jpeg,.webp,.gif,.txt,.md" hidden>
+      <div class="chips" id="chips"></div>
+    </section>
 
-    <label class="title" id="stylesLabel">Font style</label>
-    <div class="styles" id="styles" role="radiogroup" aria-labelledby="stylesLabel"></div>
+    <section class="sec">
+      <div class="sec-h"><span class="num">3</span>Options</div>
+      <div class="row">
+        <div>
+          <label class="title" for="date">Date on title slide</label>
+          <input type="text" id="date" name="date">
+        </div>
+        <div>
+          <label class="title" for="slidesMode">Number of slides</label>
+          <select id="slidesMode">
+            <option value="standard">12 slides (standard)</option>
+            <option value="fewer">Fewer than 12</option>
+            <option value="long">15 to 20 slides</option>
+            <option value="custom">Custom number</option>
+          </select>
+        </div>
+      </div>
+      <div id="fewerBox" hidden>
+        <label class="title" for="fewerN">How many slides</label>
+        <select id="fewerN"></select>
+      </div>
+      <div id="customBox" hidden>
+        <label class="title" for="customN">How many slides (3 to 99)</label>
+        <input type="number" id="customN" min="3" max="99" value="25" inputmode="numeric">
+      </div>
+      <p class="hint" id="countHint">Title, Sequence and THANK YOU slides are included in the count.</p>
 
-    <label class="check"><input type="checkbox" id="agenda" checked> Add a Sequence (agenda) slide</label>
+      <label class="title" id="stylesLabel">Font style</label>
+      <div class="styles" id="styles" role="radiogroup" aria-labelledby="stylesLabel"></div>
 
-    <button class="btn primary" id="go" type="submit">Make presentation</button>
-    <div class="error" id="error" role="alert"></div>
+      <label class="check"><input type="checkbox" id="agenda" checked> Add a Sequence (agenda) slide</label>
+    </section>
+
+    <div class="actions">
+      <button class="btn primary" id="go" type="submit"><span class="dot" aria-hidden="true"></span><span>Make presentation</span></button>
+      <div class="error" id="error" role="alert"></div>
+    </div>
   </form>
 
-  <section class="result" aria-live="polite">
-    <h2 id="deckTitle">Preview</h2>
+  <section class="result card" aria-live="polite">
+    <div class="progress" id="progress" hidden><i></i></div>
+    <div class="result-h">
+      <div>
+        <h2 id="deckTitle">Preview</h2>
+        <div class="meta" id="deckMeta"></div>
+      </div>
+    </div>
     <div class="status" id="status" hidden><div class="spinner" id="spin"></div><span id="statusText"></span></div>
 
     <div class="empty" id="empty">
-      <div>Your slides appear here<small>Download as PowerPoint, PDF, pictures or Word</small></div>
+      <div>
+        <div class="stack" aria-hidden="true"><span></span><span></span><span><b></b><i></i><i></i><i></i></span></div>
+        <h3>Your slides appear here</h3>
+        <p>Download as PowerPoint, PDF, pictures or Word</p>
+      </div>
     </div>
+    <div class="skeleton" id="skeleton" hidden aria-hidden="true"><div></div><div></div><div></div><div></div><div></div><div></div></div>
 
     <div class="downloads" id="downloads" hidden>
-      <a class="btn ghost" data-kind="pptx">PowerPoint</a>
-      <a class="btn ghost" data-kind="pdf">PDF</a>
-      <a class="btn ghost" data-kind="zip">Pictures (.zip)</a>
-      <a class="btn ghost" data-kind="docx">Word</a>
-      <button class="btn ghost new" id="newBtn" type="button">+ New presentation</button>
-    </div>
-    <div class="toast" id="toast" role="status" hidden>
-      <span id="toastText"></span>
-      <button type="button" id="keepBtn">Keep it</button>
+      <a class="btn ghost" data-kind="pptx"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="12" rx="2"/><path d="M8 21h8M12 17v4"/></svg>PowerPoint</a>
+      <a class="btn ghost" data-kind="pdf"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 14h6M9 17h4"/></svg>PDF</a>
+      <a class="btn ghost" data-kind="zip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.8"/><path d="m21 16-5-5-9 9"/></svg>Pictures (.zip)</a>
+      <a class="btn ghost" data-kind="docx"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="m8.5 12 1.2 5 1.3-3.5 1.3 3.5 1.2-5"/></svg>Word</a>
+      <button class="btn ghost new" id="newBtn" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>New presentation</button>
     </div>
 
     <div class="grid" id="grid"></div>
@@ -231,11 +396,17 @@
   </section>
 </main>
 
+<div class="toast" id="toast" role="status" hidden>
+  <span id="toastText"></span>
+  <button type="button" id="keepBtn">Keep it</button>
+</div>
+
 <div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Slide preview">
   <button class="close" id="lbClose" aria-label="Close">×</button>
   <button class="nav prev" id="lbPrev" aria-label="Previous slide">‹</button>
   <img id="lbImg" alt="">
   <button class="nav next" id="lbNext" aria-label="Next slide">›</button>
+  <div class="count" id="lbCount"></div>
 </div>
 
 <script>
@@ -276,7 +447,7 @@ function syncCount() {
 syncCount();
 
 // Font styles (Neat 1, Neat 2, Neat 3) from fonts.json
-let chosenStyle = null;
+let chosenStyle = null, styleLabels = {};
 function pickStyle(id) {
   chosenStyle = id;
   document.querySelectorAll(".style-card").forEach(b => {
@@ -289,6 +460,7 @@ function pickStyle(id) {
 fetch("/api/styles").then(r => r.json()).then(({ default: def, styles }) => {
   const box = $("styles");
   styles.forEach(s => {
+    styleLabels[s.id] = s.label;
     const b = document.createElement("button");
     b.type = "button"; b.className = "style-card"; b.dataset.id = s.id;
     b.setAttribute("role", "radio");
@@ -468,13 +640,22 @@ $("files").onchange = (e) => { addFiles(e.target.files); e.target.value = ""; };
 ["dragleave","drop"].forEach(t => $("drop").addEventListener(t, e => { e.preventDefault(); $("drop").classList.remove("over"); }));
 $("drop").addEventListener("drop", e => addFiles(e.dataTransfer.files));
 
-// Status
+// Status: spinner pill, progress bar, loading skeleton or empty state
+function refreshArea() {
+  const hasSlides = $("grid").children.length > 0;
+  const working = !$("progress").hidden;
+  $("empty").hidden = hasSlides || working;
+  $("skeleton").hidden = hasSlides || !working;
+}
 function busy(on, text) {
   $("status").hidden = !text;
   $("spin").hidden = !on;
   $("statusText").textContent = text || "";
   $("go").disabled = on;
+  $("go").classList.toggle("loading", on);
   $("apply").disabled = on;
+  $("progress").hidden = !on;
+  refreshArea();
 }
 
 // Start fresh: clear the last presentation and the form, keep your settings.
@@ -486,8 +667,8 @@ function resetAll() {
   $("grid").innerHTML = "";
   $("downloads").hidden = true;
   $("revise").hidden = true;
-  $("empty").hidden = false;
   $("deckTitle").textContent = "Preview";
+  $("deckMeta").textContent = "";
   busy(false, "");
   ["brief", "feedback"].forEach(id => $(id).value = "");
   ["error", "micNote", "interim"].forEach(id => $(id).textContent = "");
@@ -514,11 +695,12 @@ function show(job) {
   if (job.title) $("deckTitle").textContent = job.title;
   if (job.slides && job.slides.length) {
     slides = job.slides.map(s => s + "?v=" + job.version);
-    $("empty").hidden = true;
+    $("deckMeta").textContent = `${slides.length} slides` + (chosenStyle && styleLabels[chosenStyle] ? ` · ${styleLabels[chosenStyle]}` : "");
     $("grid").innerHTML = "";
     slides.forEach((src, i) => {
       const b = document.createElement("button");
       b.className = "thumb"; b.type = "button";
+      b.style.setProperty("--i", Math.min(i, 24));
       b.innerHTML = `<img alt="Slide ${i + 1}" loading="lazy"><span>${i + 1}</span>`;
       b.querySelector("img").src = src;
       b.onclick = () => openLb(i);
@@ -530,6 +712,7 @@ function show(job) {
     $("downloads").hidden = false;
     $("revise").hidden = false;
   }
+  refreshArea();
 }
 
 async function poll() {
@@ -572,7 +755,9 @@ $("form").onsubmit = async (e) => {
     if (!r.ok) throw new Error(d.error || "Something went wrong.");
     jobId = d.id;
     $("grid").innerHTML = ""; $("downloads").hidden = true; $("revise").hidden = true;
-    $("empty").hidden = false; $("deckTitle").textContent = "Preview";
+    $("deckTitle").textContent = "Preview"; $("deckMeta").textContent = "";
+    refreshArea();
+    if (window.matchMedia("(max-width: 960px)").matches) document.querySelector(".result").scrollIntoView({ behavior: "smooth" });
     poll();
   } catch (err) { busy(false, ""); $("error").textContent = err.message; }
 };
@@ -592,9 +777,17 @@ $("apply").onclick = async () => {
 };
 
 // Lightbox
-function openLb(i) { lbIndex = i; $("lbImg").src = slides[i]; $("lightbox").classList.add("open"); $("lbClose").focus(); }
+function openLb(i) {
+  lbIndex = i; $("lbImg").src = slides[i];
+  $("lbCount").textContent = `${i + 1} / ${slides.length}`;
+  $("lightbox").classList.add("open"); $("lbClose").focus();
+}
 function closeLb() { $("lightbox").classList.remove("open"); }
-function step(d) { openLb((lbIndex + d + slides.length) % slides.length); }
+function step(d) {
+  lbIndex = (lbIndex + d + slides.length) % slides.length;
+  const img = $("lbImg"); img.style.animation = "none"; void img.offsetWidth; img.style.animation = "";
+  img.src = slides[lbIndex]; $("lbCount").textContent = `${lbIndex + 1} / ${slides.length}`;
+}
 $("lbClose").onclick = closeLb;
 $("lbPrev").onclick = (e) => { e.stopPropagation(); step(-1); };
 $("lbNext").onclick = (e) => { e.stopPropagation(); step(1); };
