@@ -437,7 +437,7 @@ function syncCount() {
   $("fewerBox").hidden = mode !== "fewer";
   $("customBox").hidden = mode !== "custom";
   const total = mode === "long" ? 15 : n;
-  const tooMany = $("agenda").checked && total - 3 > 14;
+  const tooMany = $("agenda").checked && total - 3 > 16;
   $("countHint").textContent = (tooMany
     ? "Too many slides for one Sequence slide, so it will be left out."
     : "Title, Sequence and THANK YOU slides are included in the count.")

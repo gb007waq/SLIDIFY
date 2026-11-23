@@ -33,9 +33,9 @@ Taken from the owner's reference deck, `reference/CMPO Gov.pdf`. Open it wheneve
 - Pair related items on one line with ` | `: "Low Cost | Low HR", "Roads | Infrastructure".
 - Plain, direct statements in the active voice: "CMPO will not replicate any function already assigned in the Government".
 - Keep dates and figures compact: "13th Aug, 24", "200 M PKR", "~50 M PKR".
-- 3-7 lines per slide. A list of more than 7 short items goes in two columns.
+- **6-8 lines on every content slide.** Use 6 when the topic is simple and 7-8 when it needs more detail; never fewer than 6. A long list of short items goes in two columns (up to 8 per column). Spacing tightens slightly at 8 lines so they fit.
 - **12 slides by default**, counting the title, Sequence and THANK YOU slides. When the owner asks for another number (fewer, 15-20, or any exact count), use that instead.
-- The Sequence slide lists up to 7 headings in one column and up to 14 in two columns. With more than 14 content slides, leave it out.
+- The Sequence slide lists up to 8 headings in one column and up to 16 in two columns. With more than 16 content slides, leave it out.
 
 ## Reference examples
 

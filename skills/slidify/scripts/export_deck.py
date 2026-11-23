@@ -73,10 +73,10 @@ def _logo(img, name, x, y, h):
     return w
 
 
-def _lines(d, x_emu, top_emu, lines, pt):
+def _lines(d, x_emu, top_emu, lines, pt, n=None):
     x = _px(x_emu + bd.INSET)
     y = _px(top_emu) + _pt(2)
-    step = _pt(pt * 1.2 + bd.LINE_GAP_PT)
+    step = _pt(pt * 1.2 + bd.line_gap(n or len(lines), pt))
     for line in lines:
         _text(d, x, y, bd.clean(line), pt, bd.BLACK)
         y += step
@@ -107,18 +107,18 @@ def render_slides(spec):
         _text(d, _px(bd.LEFT + bd.INSET), hy, bd.clean(s["heading"]), hpt, bd.GREY_HEADING)
         _logo(img, "logo_top.png", W - int(0.95 * PX_PER_IN), 0, int(1.0 * PX_PER_IN))
         _logo(img, "logo_corner.png", W - int(1.65 * PX_PER_IN), H - int(0.85 * PX_PER_IN), int(0.55 * PX_PER_IN))
-        top = int(1.65 * 914400)
+        top = int(bd.BODY_TOP)
         if "lines" in s:
             pt = bd.pick_size(bd.BODY_SIZES, s["lines"], bd.TEXT_W)
             _lines(d, bd.LEFT, top, s["lines"], pt)
         else:
             pt = bd.pick_size(bd.BODY_SIZES, s["left"] + s["right"], bd.COL_W)
-            _lines(d, bd.COL_LEFT_X, top, s["left"], pt)
-            _lines(d, bd.COL_RIGHT_X, top, s["right"], pt)
             n = max(len(s["left"]), len(s["right"]))
+            _lines(d, bd.COL_LEFT_X, top, s["left"], pt, n)
+            _lines(d, bd.COL_RIGHT_X, top, s["right"], pt, n)
             x = _px(bd.DIVIDER_X)
             y0 = _px(top) - int(0.1 * PX_PER_IN)
-            y1 = _px(top) + n * _pt(pt * 1.2 + bd.LINE_GAP_PT) - int(0.2 * PX_PER_IN)
+            y1 = _px(top) + n * _pt(pt * 1.2 + bd.line_gap(n, pt)) - int(0.2 * PX_PER_IN)
             d.line([(x, y0), (x, y1)], fill="black", width=max(2, _pt(1.25)))
         slides.append(img)
 

@@ -57,7 +57,8 @@ GREY_CLOSING = RGBColor(0x80, 0x80, 0x80)  # title and THANK YOU
 BLACK = RGBColor(0x00, 0x00, 0x00)       # body lines, column divider
 
 MAX_SLIDES = 12
-MAX_LINES = 7            # per slide (per column on two-column slides)
+MIN_LINES = 6            # every content slide: 6-8 lines, more when the topic needs detail
+MAX_LINES = 8            # per slide (per column on two-column slides)
 MAX_LINE_WORDS = 12
 MAX_HEADING_WORDS = 5
 
@@ -239,6 +240,9 @@ def _validate(spec, min_slides, max_slides):
             cols = [("", s["lines"], TEXT_W)]
         else:
             cols = [("left ", s.get("left", []), COL_W), ("right ", s.get("right", []), COL_W)]
+        total_lines = sum(len(c[1]) for c in cols)
+        if total_lines < MIN_LINES:
+            errors.append(f"Slide {i}: {total_lines} lines (needs {MIN_LINES}-{MAX_LINES}); add detail.")
         for name, lines, width in cols:
             if not lines:
                 errors.append(f"Slide {i}: {name}column has no lines.")
@@ -311,11 +315,24 @@ def heading(slide, text):
     picture(slide, "logo_corner.png", SLIDE_W - Inches(1.65), SLIDE_H - Inches(0.85), Inches(0.55))
 
 
-def lines_box(slide, left, top, width, lines, pt):
+BODY_TOP = Inches(1.65)
+BODY_BOTTOM = SLIDE_H - Inches(0.65)
+
+
+def line_gap(n, pt):
+    """Space after each line: the usual 32 pt, tightened so 7-8 lines still fit the slide."""
+    if n <= 1:
+        return LINE_GAP_PT
+    room = Emu(BODY_BOTTOM - BODY_TOP).pt - n * pt * 1.2
+    return max(8, min(LINE_GAP_PT, room / (n - 1)))
+
+
+def lines_box(slide, left, top, width, lines, pt, n=None):
     tf = textbox(slide, left, top, width, SLIDE_H - top - Inches(0.6))
+    gap = line_gap(n or len(lines), pt)
     for k, line in enumerate(lines):
         p = tf.paragraphs[0] if k == 0 else tf.add_paragraph()
-        p.space_after = Pt(LINE_GAP_PT)
+        p.space_after = Pt(gap)
         write(p, clean(line), pt, BLACK)
     return tf
 
@@ -339,16 +356,16 @@ def title_slide(prs, title, date=None):
 def content_slide(prs, spec):
     s = blank(prs)
     heading(s, spec["heading"])
-    top = Inches(1.65)
+    top = BODY_TOP
     if "lines" in spec:
         pt = pick_size(BODY_SIZES, spec["lines"], TEXT_W)
         lines_box(s, LEFT, top, TEXT_W, spec["lines"], pt)
     else:
         pt = pick_size(BODY_SIZES, spec["left"] + spec["right"], COL_W)
-        lines_box(s, COL_LEFT_X, top, COL_W, spec["left"], pt)
-        lines_box(s, COL_RIGHT_X, top, COL_W, spec["right"], pt)
         n = max(len(spec["left"]), len(spec["right"]))
-        pitch = Pt(pt * 1.2 + LINE_GAP_PT)
+        lines_box(s, COL_LEFT_X, top, COL_W, spec["left"], pt, n)
+        lines_box(s, COL_RIGHT_X, top, COL_W, spec["right"], pt, n)
+        pitch = Pt(pt * 1.2 + line_gap(n, pt))
         bottom = top + int(pitch * n)
         d = s.shapes.add_connector(MSO_CONNECTOR.STRAIGHT, DIVIDER_X, top - Inches(0.1),
                                    DIVIDER_X, bottom - Inches(0.2))
