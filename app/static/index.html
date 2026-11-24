@@ -7,6 +7,15 @@
 <link rel="icon" href="/static/slidify-64.png">
 <link rel="apple-touch-icon" href="/static/slidify-512.png">
 <meta name="theme-color" content="#2b2b2b">
+<script>
+  // Apply the saved white/black choice before the page paints (no flash).
+  (function () {
+    var t = null;
+    try { t = localStorage.getItem("slidify-theme"); } catch (e) {}
+    if (t !== "dark" && t !== "light") t = window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    document.documentElement.setAttribute("data-theme", t);
+  })();
+</script>
 <style>
   :root {
     --ink: #0b0b0b;
@@ -264,6 +273,65 @@
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
   }
+  /* white / black background toggle */
+  .theme-btn { margin-left: auto; display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--line);
+               background: var(--card); color: var(--grey-1); border-radius: 999px; padding: 7px 14px 7px 10px; cursor: pointer;
+               font-size: 14px; transition: background .25s, border-color .25s, transform .15s, box-shadow .2s; }
+  .theme-btn:hover { transform: translateY(-1px); box-shadow: 0 8px 18px -12px rgba(0,0,0,.45); border-color: var(--line-2); }
+  .theme-btn .knob { position: relative; width: 34px; height: 20px; border-radius: 999px; background: var(--wash);
+                     border: 1px solid var(--line-2); transition: background .3s; }
+  .theme-btn .knob::after { content: ""; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%;
+                            background: var(--grey-1); transition: transform .3s var(--ease), background .3s; }
+  [data-theme="dark"] .theme-btn .knob::after { transform: translateX(14px); }
+  html { transition: background-color .3s; }
+  body, .card, .top, textarea, input, select, .drop, .btn, .mic, .chip, .style-card, .empty, .revise, .status { transition-property: background-color, border-color, color, box-shadow, transform; }
+
+  /* black mode: app only - slides stay white */
+  [data-theme="dark"] {
+    --ink: #f2f2f2; --grey-1: #e6e6e6; --grey-2: #c4c4c4; --grey-3: #9b9b9b; --grey-4: #767676;
+    --line: #2d2d2f; --line-2: #3d3d40; --wash: #232325; --card: #19191a; --page: #0d0d0e;
+    --shadow: 0 1px 2px rgba(0,0,0,.5), 0 18px 44px -20px rgba(0,0,0,.9);
+    --shadow-hi: 0 2px 6px rgba(0,0,0,.5), 0 24px 50px -18px rgba(0,0,0,.95);
+    color-scheme: dark;
+  }
+  [data-theme="dark"] .bg { background:
+      radial-gradient(900px 500px at 8% -10%, #232325 0%, rgba(35,35,37,0) 60%),
+      radial-gradient(700px 500px at 100% 0%, #1b1b1d 0%, rgba(27,27,29,0) 60%),
+      linear-gradient(180deg, #121213 0%, #0b0b0c 100%); }
+  [data-theme="dark"] .top { background: rgba(18,18,19,.72); border-bottom-color: rgba(255,255,255,.06); }
+  [data-theme="dark"] .tag { background: rgba(35,35,37,.6); }
+  [data-theme="dark"] .card { border-color: rgba(255,255,255,.05); }
+  [data-theme="dark"] textarea, [data-theme="dark"] input[type=text], [data-theme="dark"] input[type=number],
+  [data-theme="dark"] select { background: #141415; }
+  [data-theme="dark"] textarea:focus, [data-theme="dark"] input:focus, [data-theme="dark"] select:focus { background: #111112; box-shadow: 0 0 0 4px rgba(255,255,255,.07); }
+  [data-theme="dark"] .num { background: var(--grey-1); color: #111; }
+  [data-theme="dark"] .mic { background: var(--card); }
+  [data-theme="dark"] .mic.on { background: var(--grey-1); color: #111; }
+  [data-theme="dark"] .drop { background: #161617; }
+  [data-theme="dark"] .drop:hover, [data-theme="dark"] .drop:focus-visible { background: #1d1d1f; }
+  [data-theme="dark"] .chip button:hover { background: #333336; }
+  [data-theme="dark"] .style-card { background: var(--card); }
+  [data-theme="dark"] .style-card.on::after { filter: invert(1); }
+  [data-theme="dark"] .btn.primary { color: #111; background: linear-gradient(180deg, #ffffff 0%, #d8d8d8 100%);
+                                     box-shadow: 0 10px 24px -10px rgba(0,0,0,.9), inset 0 1px 0 rgba(255,255,255,.6); }
+  [data-theme="dark"] .btn.primary::after { background: linear-gradient(100deg, transparent, rgba(255,255,255,.7), transparent); }
+  [data-theme="dark"] .btn.primary:disabled { background: linear-gradient(180deg, #6d6d6d, #565656); color: #222; }
+  [data-theme="dark"] .btn.primary .dot { border-color: rgba(0,0,0,.25); border-top-color: #111; }
+  [data-theme="dark"] .btn.ghost { background: var(--card); }
+  [data-theme="dark"] .actions { background: linear-gradient(180deg, rgba(25,25,26,0), var(--card) 22px); }
+  [data-theme="dark"] .error { color: #f0a3a3; }
+  [data-theme="dark"] .error:not(:empty) { background: #2a1616; border-color: #4a2424; }
+  [data-theme="dark"] .progress { background: #262628; }
+  [data-theme="dark"] .empty { background: radial-gradient(500px 240px at 50% 40%, #1f1f21, #19191a); }
+  [data-theme="dark"] .stack span { background: #f4f4f4; border-color: #3a3a3a; }
+  [data-theme="dark"] .skeleton div { background: linear-gradient(100deg, #1e1e20 20%, #2a2a2d 40%, #1e1e20 60%) 0 0 / 300% 100%; }
+  [data-theme="dark"] .thumb { border-color: #2d2d2f; }
+  [data-theme="dark"] .revise textarea { background: #141415; }
+  [data-theme="dark"] .toast { background: rgba(240,240,240,.95); color: #111; }
+  [data-theme="dark"] .toast button { background: #111; color: #fff; }
+  [data-theme="dark"] .brand svg { filter: drop-shadow(0 4px 12px rgba(0,0,0,.6)) brightness(1.25); }
+  [data-theme="dark"] ::selection { background: #e6e6e6; color: #111; }
+
   [hidden] { display: none !important; }
 </style>
 </head>
@@ -284,6 +352,9 @@
     <span class="word">SLIDIFY</span>
   </a>
   <p class="tag">Signature presentations from a topic, your voice, Word, PDF or pictures</p>
+  <button class="theme-btn" id="themeBtn" type="button" aria-pressed="false" title="Switch between a white and a black background">
+    <span class="knob" aria-hidden="true"></span><span id="themeLabel">Black</span>
+  </button>
 </header>
 
 <main>
@@ -411,6 +482,20 @@
 
 <script>
 const $ = (id) => document.getElementById(id);
+
+// White / black background (the app only - slides stay white)
+function setTheme(t, save) {
+  document.documentElement.setAttribute("data-theme", t);
+  const dark = t === "dark";
+  $("themeBtn").setAttribute("aria-pressed", dark);
+  $("themeLabel").textContent = dark ? "White" : "Black";
+  $("themeBtn").setAttribute("aria-label", dark ? "Switch to a white background" : "Switch to a black background");
+  document.querySelector('meta[name="theme-color"]').content = dark ? "#0d0d0e" : "#2b2b2b";
+  if (save) { try { localStorage.setItem("slidify-theme", t); } catch (_) {} }
+}
+setTheme(document.documentElement.getAttribute("data-theme") || "light", false);
+$("themeBtn").onclick = () => setTheme(document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark", true);
+
 let picked = [];
 let jobId = null;
 let slides = [];
