@@ -212,25 +212,28 @@ def export_all(spec, folder, stem="deck"):
     folder = Path(folder)
     folder.mkdir(parents=True, exist_ok=True)
     out = {}
-    out["pptx"] = folder / f"{stem}.pptx"
-    bd.build(spec, out["pptx"])
-    images = render_slides(spec)
-    out["png"] = write_pngs(images, folder / "slides")
-    out["pdf"] = folder / f"{stem}.pdf"
-    write_pdf(images, out["pdf"])
-    out["zip"] = folder / f"{stem} - slides.zip"
-    write_zip(out["png"], out["zip"])
-    out["docx"] = folder / f"{stem}.docx"
-    write_docx(spec, out["docx"])
+    with bd.use_style(spec.get("style")):     # same font & sizes in every format
+        out["pptx"] = folder / f"{stem}.pptx"
+        bd.build(spec, out["pptx"])
+        images = render_slides(spec)
+        out["png"] = write_pngs(images, folder / "slides")
+        out["pdf"] = folder / f"{stem}.pdf"
+        write_pdf(images, out["pdf"])
+        out["zip"] = folder / f"{stem} - slides.zip"
+        write_zip(out["png"], out["zip"])
+        out["docx"] = folder / f"{stem}.docx"
+        write_docx(spec, out["docx"])
     return out
 
 
 def main():
-    args, (lo, hi) = bd.split_args(sys.argv[1:])
+    args, (lo, hi), style = bd.split_args(sys.argv[1:])
     if len(args) < 2:
         print(__doc__)
         sys.exit(2)
     spec = json.loads(Path(args[0]).read_text(encoding="utf-8-sig"))
+    if style:
+        spec["style"] = style
     errors = bd.validate(spec, lo, hi)
     if errors:
         print("STYLE CHECK FAILED - fix these and run again:")

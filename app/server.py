@@ -178,7 +178,7 @@ def per_slide_errors(spec):
     """{content index (0-based): [errors]} using the builder's own checks."""
     bad = {}
     for i, s in enumerate(spec.get("slides", [])):
-        errs = bd.validate({"title": "x", "slides": [s]}, 1, 10**6)
+        errs = bd.validate({"title": "x", "slides": [s], "style": spec.get("style")}, 1, 10**6)
         if errs:
             bad[i] = [e.split(": ", 1)[-1] for e in errs]
     return bad
@@ -261,7 +261,7 @@ def write_big(jid, job, folder):
             slides.append(s)
 
     spec = {"title": outline.get("title") or "Presentation", "date": outline.get("date") or job["date"],
-            "agenda": bool(job["agenda"]), "slides": slides}
+            "agenda": bool(job["agenda"]), "slides": slides, "style": job.get("style")}
     return spec, session
 
 
@@ -325,6 +325,7 @@ def make_deck(jid, prompt, session=None, limits=(1, bd.MAX_SLIDES), feedback=Non
         spec = extract_spec(text)
         for attempt in range(1, MAX_TRIES + 1):
             spec.pop("closing", None)
+            spec["style"] = job.get("style")
             errors = bd.validate(spec, *limits)
             if not errors:
                 break
@@ -337,7 +338,7 @@ def make_deck(jid, prompt, session=None, limits=(1, bd.MAX_SLIDES), feedback=Non
             spec = extract_spec(text)
 
     spec.pop("closing", None)
-    spec.pop("style", None)
+    spec["style"] = job.get("style")
     set_job(jid, message=f"Building PowerPoint, PDF, pictures & Word ({bd.slide_count(spec)} slides)...")
     version = job.get("version", 0) + 1
     out_dir = folder / f"v{version}"
@@ -395,16 +396,32 @@ def create_job():
     except ValueError:
         n = 0
     limits = slide_limits(request.form.get("slides_mode", "standard"), n)
+    default_style, styles = bd.load_styles()
+    style = request.form.get("style") or default_style
+    if style not in styles or not bd.style_ready(styles[style]):
+        style = default_style
     agenda = request.form.get("agenda") == "true"
     if agenda and limits[0] - 3 > bd.MAX_AGENDA:
         agenda = False  # too many slides to list on one agenda slide
     job = {"id": jid, "status": "queued", "message": "Starting...", "brief": brief,
            "sources": sources, "date": (request.form.get("date") or "").strip(),
-           "agenda": agenda, "limits": limits, "spoken": request.form.get("spoken") == "true"}
+           "agenda": agenda, "limits": limits, "spoken": request.form.get("spoken") == "true",
+           "style": style}
     with lock:
         jobs[jid] = job
     threading.Thread(target=worker, args=(jid, first_prompt(job), None, limits), daemon=True).start()
     return jsonify(id=jid)
+
+
+@app.get("/api/styles")
+def styles_list():
+    """Font styles for the picker; a style without a font shows as 'coming soon'."""
+    default, styles = bd.load_styles()
+    return jsonify(default=default, styles=[
+        {"id": k, "label": v.get("label", k), "font": v.get("font"), "ready": bd.style_ready(v),
+         "stand_in": bd.style_ready(v) and bd.style_file(v)[1],
+         "title_pt": v.get("title_pt"), "heading_pt": v.get("heading_pt"), "body_pt": v.get("body_pt")}
+        for k, v in styles.items()])
 
 
 @app.post("/api/translate")

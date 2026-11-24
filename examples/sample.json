@@ -1,52 +1,117 @@
 {
-  "title": "Artificial Intelligence",
+  "title": "Employment Generation in KP",
   "date": "NOV, 2026",
   "agenda": true,
   "slides": [
-    {"heading": "What is AI", "lines": [
-      "Machines doing tasks that need human intelligence",
-      "Learns patterns from data, not fixed rules",
-      "Predicts | Classifies | Generates | Decides"
-    ]},
-    {"heading": "Brief History", "lines": [
-      "1956 | Field named at Dartmouth",
-      "1997 | Deep Blue beats Kasparov",
-      "2012 | Deep learning breakthrough",
-      "2022 | Generative AI goes mainstream"
-    ]},
-    {"heading": "How AI Learns", "lines": [
-      "Supervised | Learns from labelled examples",
-      "Unsupervised | Finds hidden structure in data",
-      "Reinforcement | Learns by trial & reward"
-    ]},
-    {"heading": "AI Today", "left": [
-      "Search | Maps",
-      "Voice Assistants",
-      "Translation",
-      "Fraud Detection"
-    ], "right": [
-      "Healthcare Diagnosis",
-      "Coding Assistants",
-      "Predictive Maintenance",
-      "Customer Service Agents"
-    ]},
-    {"heading": "Benefits", "lines": [
-      "Automates repetitive work",
-      "Speeds research & discovery",
-      "Personalises public & private services",
-      "Scales scarce expertise to more people"
-    ]},
-    {"heading": "Risks", "lines": [
-      "Bias inherited from training data",
-      "Confident but wrong outputs",
-      "Privacy & security concerns",
-      "Job disruption in some roles"
-    ]},
-    {"heading": "Responsible AI", "lines": [
-      "Transparency in how systems decide",
-      "Human oversight on key decisions",
-      "Testing for safety & fairness",
-      "Clear rules | Clear accountability"
-    ]}
+    {
+      "heading": "Employment Landscape",
+      "lines": [
+        "Large youth bulge with most of KP under 30",
+        "Hundreds of thousands of new job seekers every year",
+        "Unemployment highest among educated youth & women",
+        "Informal sector absorbs most of the workforce",
+        "Remittances a key income source for many households",
+        "Merged districts lag on every jobs indicator"
+      ]
+    },
+    {
+      "heading": "Key Challenges",
+      "lines": [
+        "Skills mismatch between training & market demand",
+        "Weak industrial base | Low private investment",
+        "Limited access to finance for small firms",
+        "Poor energy supply & connectivity in remote districts",
+        "Low female labour force participation",
+        "No real-time labour market information",
+        "Security perception deters investors"
+      ]
+    },
+    {
+      "heading": "TVET Today",
+      "lines": [
+        "Many institutes with low enrolment & weak outcomes",
+        "Outdated curricula | Obsolete equipment",
+        "Training led by supply, not employer demand",
+        "Few links with industry for placements",
+        "Weak certification & quality assurance",
+        "Little tracking of graduate employment"
+      ]
+    },
+    {
+      "heading": "TVET Reform",
+      "lines": [
+        "Demand-driven courses designed with employers",
+        "Competency-based training & assessment in all trades",
+        "Industry boards to govern every major institute",
+        "Apprenticeships & on-the-job training made mandatory",
+        "Instructor upskilling | Modern labs",
+        "Funding linked to graduate placement results",
+        "Digital & freelancing skills in every district"
+      ]
+    },
+    {
+      "heading": "Growth Centres",
+      "lines": [
+        "Special Economic Zones as anchors for job creation",
+        "Rashakai | Hattar | Nowshera industrial clusters",
+        "District growth centres built on local strengths",
+        "Tourism hubs in Swat | Chitral | Galiyat",
+        "Marble & mineral processing in Buner & Mohmand",
+        "Agro-processing clusters for fruit & dairy",
+        "Plug-and-play facilities for small enterprises"
+      ]
+    },
+    {
+      "heading": "Priority Sectors",
+      "left": [
+        "Construction",
+        "Tourism | Hospitality",
+        "Agriculture | Livestock",
+        "Minerals | Mining",
+        "IT | Freelancing"
+      ],
+      "right": [
+        "Textiles | Garments",
+        "Food Processing",
+        "Healthcare | Nursing",
+        "Renewable Energy",
+        "Overseas Employment"
+      ]
+    },
+    {
+      "heading": "Private Sector Links",
+      "lines": [
+        "Employer councils to shape skills priorities",
+        "Public-private partnerships to run TVET institutes",
+        "Wage subsidies for first-time hires",
+        "Paid internships for graduates in local firms",
+        "Single window for investor approvals",
+        "Chambers of commerce as active partners",
+        "Overseas employment linked to certified skills"
+      ]
+    },
+    {
+      "heading": "Key Enablers",
+      "lines": [
+        "Easy credit for youth & women entrepreneurs",
+        "Labour market information system for KP",
+        "Reliable power | Better road links",
+        "Online business registration & licensing",
+        "Targeted support for merged districts",
+        "Skills training for women close to home"
+      ]
+    },
+    {
+      "heading": "Way Forward",
+      "lines": [
+        "Set up a KP Jobs Task Force under CM",
+        "Pilot reformed TVET in 5 districts by Jun, 27",
+        "Launch employer councils in each growth centre",
+        "Fast-track approvals in Special Economic Zones",
+        "Track jobs created on a public dashboard",
+        "Scale what works | Close what does not",
+        "Review progress every quarter"
+      ]
+    }
   ]
 }
