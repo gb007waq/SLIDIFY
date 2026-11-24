@@ -133,28 +133,57 @@ def content_rule(job):
     return str(a) if a == b else f"{a} to {b}"
 
 
+PYRAMID_GUIDE = """STRUCTURE: PYRAMID (answer first). Build the deck top-down:
+- TOP - the answer. The first content slide is the executive summary (kind "summary"):
+  its heading is the core recommendation or conclusion as one complete sentence;
+  its 3-6 lines state each supporting pillar as a complete sentence, plus the ask or next step.
+- MIDDLE - the pillars. 2-4 pillar slides (kind "pillar"; 3 is usually best), each a distinct,
+  non-overlapping reason the answer holds. Each pillar heading is a complete-sentence claim
+  (the "so what", not a topic label); its 6-8 lines give the strongest evidence for it.
+- BASE - the evidence. After a pillar, add evidence slides (kind "evidence") that back it with
+  facts, figures, KPIs, results and comparisons. Every heading is a complete-sentence takeaway.
+- APPENDIX - extra detail that would slow the story goes last: a divider slide
+  {"kind": "section", "heading": "Appendix"} (no lines) followed by appendix slides (kind "appendix", 3-8 lines).
+  Only add an appendix when there is genuine extra detail.
+Writing: headings and lines are COMPLETE SENTENCES (subject + verb), up to 14 words, still exactly
+one line each, no full stops. Lead with numbers where you have them ("Bills fell 70 percent in Mardan pilot").
+No Sequence/agenda slide - the executive summary is the agenda."""
+
+
 def first_prompt(job):
     today = dt.date.today().strftime("%b, %Y").upper()
+    pyramid = job.get("structure") == "pyramid"
+    if pyramid:
+        rules = [PYRAMID_GUIDE, "",
+                 "Builder limits: every line must fit on one line of a 16:9 slide at 20 pt",
+                 "(two-column lines are half width); pillar and evidence slides have 6-8 lines."]
+        schema = ('{"title": str, "date": str, "structure": "pyramid", "agenda": false, "slides": ['
+                  '{"kind": "summary"|"pillar"|"evidence"|"section"|"appendix", "heading": str, "lines": [str]}'
+                  ' or {"kind": ..., "heading": str, "left": [str], "right": [str]}]}')
+    else:
+        rules = ["LINES PER SLIDE: every content slide has 6 to 8 one-liners - 6 when the topic is simple,",
+                 "7 or 8 when it needs more detail. Two-column slides: up to 8 per column, at least 6 in total.",
+                 "Builder limits: at most 12 words per line;",
+                 "headings at most 5 words; every line must fit on one line of a 16:9 slide at 20 pt",
+                 "(two-column lines are half width). The agenda lists up to 16 content headings."]
+        schema = ('{"title": str, "date": str, "agenda": bool, "slides": [{"heading": str, "lines": [str]}'
+                  ' or {"heading": str, "left": [str], "right": [str]}]}')
     lines = [
         "You are SLIDIFY, the owner's presentation agent.",
         "Write a deck in the owner's signature style, described in this style guide:",
         "",
         "<style_guide>", STYLE, "</style_guide>",
         "",
-        "LINES PER SLIDE: every content slide has 6 to 8 one-liners - 6 when the topic is simple,",
-        "7 or 8 when it needs more detail. Two-column slides: up to 8 per column, at least 6 in total.",
-        "Builder limits: at most 12 words per line;",
-        "headings at most 5 words; every line must fit on one line of a 16:9 slide at 20 pt",
-        "(two-column lines are half width). The agenda lists up to 16 content headings.",
+        *rules,
         "",
         f"SLIDE COUNT: {count_rule(job)}",
-        "The title slide, the Sequence agenda (if any) and the THANK YOU slide all count.",
+        "The title slide, the Sequence agenda (if any) and the THANK YOU slide all count"
+        + (" (so does the Appendix divider)." if pyramid else "."),
         f"So the 'slides' array must hold {content_rule(job)} content slides.",
         "Spread the material evenly; never pad with filler slides.",
         "",
         "Reply with ONLY the JSON spec in a ```json block, nothing else. Schema:",
-        '{"title": str, "date": str, "agenda": bool, "slides": [{"heading": str, "lines": [str]}'
-        ' or {"heading": str, "left": [str], "right": [str]}]}',
+        schema,
         "",
         f"Date to use: {job['date'] or today}.",
         f"Include a Sequence agenda slide: {'yes' if job['agenda'] else 'no'}.",
@@ -171,16 +200,22 @@ def first_prompt(job):
     return "\n".join(lines)
 
 
-SLIDE_SCHEMA = ('{"heading": str, "lines": [str]} or {"heading": str, "left": [str], "right": [str]}')
+SLIDE_SCHEMA = ('{"heading": str, "lines": [str]} or {"heading": str, "left": [str], "right": [str]}'
+                ' (keep each slide\'s "kind" if it has one)')
 
 
 def per_slide_errors(spec):
-    """{content index (0-based): [errors]} using the builder's own checks."""
+    """{content index (0-based): [errors]} using the builder's own slide checks."""
     bad = {}
-    for i, s in enumerate(spec.get("slides", [])):
-        errs = bd.validate({"title": "x", "slides": [s], "style": spec.get("style")}, 1, 10**6)
-        if errs:
-            bad[i] = [e.split(": ", 1)[-1] for e in errs]
+    structure = spec.get("structure", "standard")
+    try:
+        with bd.use_style(spec.get("style")):
+            for i, s in enumerate(spec.get("slides", [])):
+                errs = bd.slide_errors(s, i + 1, structure)
+                if errs:
+                    bad[i] = [e.split(": ", 1)[-1] for e in errs]
+    except ValueError:
+        pass
     return bad
 
 
@@ -206,6 +241,8 @@ def fix_slides(jid, spec, session, folder):
         for k, s in extract_spec(text).get("slides", {}).items():
             idx = int(k) - 1
             if 0 <= idx < len(spec["slides"]) and isinstance(s, dict):
+                if "kind" in spec["slides"][idx]:
+                    s.setdefault("kind", spec["slides"][idx]["kind"])
                 spec["slides"][idx] = s
     bad = per_slide_errors(spec)
     if bad:
@@ -222,20 +259,32 @@ def write_big(jid, job, folder):
     plan = first_prompt(job).replace(
         "Reply with ONLY the JSON spec in a ```json block, nothing else. Schema:",
         "First, plan the deck only. Reply with ONLY JSON in a ```json block, nothing else. Schema:")
-    plan = plan.replace(
-        '{"title": str, "date": str, "agenda": bool, "slides": [{"heading": str, "lines": [str]}'
-        ' or {"heading": str, "left": [str], "right": [str]}]}',
-        '{"title": str, "date": str, "agenda": bool, "headings": [str]}  '
-        f"- exactly {k} distinct headings, in presentation order, at most 5 words each.")
+    pyramid = job.get("structure") == "pyramid"
+    schema_start = plan.index("Reply with ONLY JSON")
+    schema_line = plan[schema_start:].split("\n")[1]
+    if pyramid:
+        plan_schema = ('{"title": str, "date": str, "outline": [{"kind": "summary"|"pillar"|"evidence"|"section"|"appendix",'
+                       ' "heading": str}]}  ' f"- exactly {k} entries in presentation order, following the pyramid structure.")
+    else:
+        plan_schema = ('{"title": str, "date": str, "agenda": bool, "headings": [str]}  '
+                       f"- exactly {k} distinct headings, in presentation order, at most 5 words each.")
+    plan = plan.replace(schema_line, plan_schema)
+
+    def read_plan(o):
+        if pyramid:
+            items = [x for x in o.get("outline", []) if isinstance(x, dict) and str(x.get("heading", "")).strip()]
+            return [(x["heading"], x.get("kind")) for x in items]
+        return [(h, None) for h in o.get("headings", []) if str(h).strip()]
+
     text, session = run_claude(plan, folder, None, CLAUDE_TIMEOUT + 2 * k)
     outline = extract_spec(text)
-    heads = [h for h in outline.get("headings", []) if str(h).strip()]
+    heads = read_plan(outline)
     if len(heads) != k:
         text, session = run_claude(
-            f"You gave {len(heads)} headings; I need exactly {k}. Reply with the corrected JSON plan only.",
+            f"You gave {len(heads)} entries; I need exactly {k}. Reply with the corrected JSON plan only.",
             folder, session, CLAUDE_TIMEOUT + 2 * k)
         outline = extract_spec(text)
-        heads = [h for h in outline.get("headings", []) if str(h).strip()]
+        heads = read_plan(outline)
     if len(heads) < k:
         raise RuntimeError(f"Could only plan {len(heads)} of {k} slides. Try a broader topic or fewer slides.")
     heads = heads[:k]
@@ -244,8 +293,10 @@ def write_big(jid, job, folder):
     for start in range(0, k, BATCH):
         part = heads[start:start + BATCH]
         set_job(jid, message=f"Writing slides {start + 1}-{start + len(part)} of {k}...")
-        ask = ("Now write the content slides for these headings, in this order, using the headings exactly:\n" +
-               "\n".join(f"{start + i + 1}. {h}" for i, h in enumerate(part)) +
+        ask = ("Now write the content slides for these headings, in this order, using the headings exactly"
+               + (" (kind in brackets; a 'section' slide has no lines - give it an empty lines list)" if pyramid else "")
+               + ":\n" +
+               "\n".join(f"{start + i + 1}. {h}" + (f" [{kd}]" if kd else "") for i, (h, kd) in enumerate(part)) +
                f"\nReply with ONLY JSON: {{\"slides\": [{SLIDE_SCHEMA}, ...]}} - exactly {len(part)} slides.")
         got = []
         for _ in range(2):
@@ -256,12 +307,15 @@ def write_big(jid, job, folder):
             ask = f"That had {len(got)} slides; I need exactly {len(part)}. " + ask
         if len(got) < len(part):
             raise RuntimeError(f"SLIDIFY stopped early while writing slides {start + 1}-{start + len(part)}.")
-        for h, s in zip(part, got):
+        for (h, kd), s in zip(part, got):
             s["heading"] = h
+            if kd:
+                s["kind"] = kd
             slides.append(s)
 
     spec = {"title": outline.get("title") or "Presentation", "date": outline.get("date") or job["date"],
-            "agenda": bool(job["agenda"]), "slides": slides, "style": job.get("style")}
+            "agenda": bool(job["agenda"]), "slides": slides, "style": job.get("style"),
+            "structure": job.get("structure", "standard")}
     return spec, session
 
 
@@ -326,6 +380,9 @@ def make_deck(jid, prompt, session=None, limits=(1, bd.MAX_SLIDES), feedback=Non
         for attempt in range(1, MAX_TRIES + 1):
             spec.pop("closing", None)
             spec["style"] = job.get("style")
+            spec["structure"] = job.get("structure", "standard")
+            if spec["structure"] == "pyramid":
+                spec["agenda"] = False
             errors = bd.validate(spec, *limits)
             if not errors:
                 break
@@ -339,6 +396,7 @@ def make_deck(jid, prompt, session=None, limits=(1, bd.MAX_SLIDES), feedback=Non
 
     spec.pop("closing", None)
     spec["style"] = job.get("style")
+    spec["structure"] = job.get("structure", "standard")
     set_job(jid, message=f"Building PowerPoint, PDF, pictures & Word ({bd.slide_count(spec)} slides)...")
     version = job.get("version", 0) + 1
     out_dir = folder / f"v{version}"
@@ -400,13 +458,14 @@ def create_job():
     style = request.form.get("style") or default_style
     if style not in styles or not bd.style_ready(styles[style]):
         style = default_style
-    agenda = request.form.get("agenda") == "true"
+    structure = "pyramid" if request.form.get("structure") == "pyramid" else "standard"
+    agenda = request.form.get("agenda") == "true" and structure == "standard"  # pyramid: summary is the agenda
     if agenda and limits[0] - 3 > bd.MAX_AGENDA:
         agenda = False  # too many slides to list on one agenda slide
     job = {"id": jid, "status": "queued", "message": "Starting...", "brief": brief,
            "sources": sources, "date": (request.form.get("date") or "").strip(),
            "agenda": agenda, "limits": limits, "spoken": request.form.get("spoken") == "true",
-           "style": style}
+           "style": style, "structure": structure}
     with lock:
         jobs[jid] = job
     threading.Thread(target=worker, args=(jid, first_prompt(job), None, limits), daemon=True).start()
@@ -466,6 +525,10 @@ def revise(jid):
     prompt = ("Change the deck as the owner asks, keeping every style rule:\n" + feedback +
               f"\n\nKeep the slide count rule ({count_rule(job)}) unless the owner asks for a different number"
               f" (3 to {MAX_CUSTOM} slides allowed)."
+              + ("\n\nThis is a PYRAMID deck: keep the answer-first structure and every slide's kind "
+                 "(summary first, 2-4 pillars each followed by its evidence, optional Appendix divider and "
+                 "appendix slides), with complete-sentence headings and lines."
+                 if job.get("structure") == "pyramid" else "") +
               "\n\nCurrent deck:\n```json\n" + json.dumps(job.get("spec", {}), ensure_ascii=False) +
               "\n```\nReply with the full updated JSON spec only.")
     set_job(jid, status="working", message="Applying your changes...")

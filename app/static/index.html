@@ -136,6 +136,19 @@
   .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   .hint { color: var(--grey-4); font-size: 12px; margin: 8px 0 0; }
 
+  /* presentation mode: Standard / Pyramid */
+  .structs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .struct-card { position: relative; text-align: left; border: 1px solid var(--line); background: var(--card); border-radius: 12px;
+                 padding: 11px 12px 12px; cursor: pointer; min-width: 0;
+                 transition: border-color .2s, box-shadow .2s, transform .2s var(--ease); }
+  .struct-card:hover { transform: translateY(-2px); box-shadow: 0 10px 22px -14px rgba(0,0,0,.45); }
+  .struct-card.on { border-color: var(--grey-1); box-shadow: inset 0 0 0 1px var(--grey-1); }
+  .struct-card svg { display: block; width: 34px; height: 24px; fill: var(--grey-4); margin-bottom: 6px; transition: fill .2s; }
+  .struct-card.on svg { fill: var(--grey-1); }
+  .struct-card b { display: block; font-weight: 400; font-size: 15px; color: var(--ink); }
+  .struct-card small { display: block; font-size: 11.5px; line-height: 1.35; color: var(--grey-3); margin-top: 2px; }
+  .check.off { opacity: .45; cursor: default; }
+
   /* font style cards */
   .styles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
   .style-card { position: relative; text-align: left; border: 1px solid var(--line); background: #fff; border-radius: 12px;
@@ -393,6 +406,17 @@
 
     <section class="sec">
       <div class="sec-h"><span class="num">3</span>Options</div>
+      <label class="title" id="structLabel" style="margin-top:4px">Presentation mode</label>
+      <div class="structs" role="radiogroup" aria-labelledby="structLabel">
+        <button type="button" class="struct-card" data-struct="standard" role="radio">
+          <svg viewBox="0 0 40 28" aria-hidden="true"><rect x="2" y="3" width="36" height="4" rx="2"/><rect x="2" y="12" width="36" height="4" rx="2"/><rect x="2" y="21" width="36" height="4" rx="2"/></svg>
+          <b>Standard</b><small>Your signature style, topic by topic</small>
+        </button>
+        <button type="button" class="struct-card" data-struct="pyramid" role="radio">
+          <svg viewBox="0 0 40 28" aria-hidden="true"><rect x="14" y="2" width="12" height="6" rx="2"/><rect x="7" y="11" width="26" height="6" rx="2"/><rect x="1" y="20" width="38" height="6" rx="2"/></svg>
+          <b>Pyramid</b><small>Answer first · 2-4 pillars · evidence · appendix · complete sentences</small>
+        </button>
+      </div>
       <div class="row">
         <div>
           <label class="title" for="date">Date on title slide</label>
@@ -421,7 +445,7 @@
       <label class="title" id="stylesLabel">Font style</label>
       <div class="styles" id="styles" role="radiogroup" aria-labelledby="stylesLabel"></div>
 
-      <label class="check"><input type="checkbox" id="agenda" checked> Add a Sequence (agenda) slide</label>
+      <label class="check" id="agendaRow"><input type="checkbox" id="agenda" checked> <span id="agendaText">Add a Sequence (agenda) slide</span></label>
     </section>
 
     <div class="actions">
@@ -530,6 +554,27 @@ function syncCount() {
 }
 ["slidesMode", "fewerN", "customN", "agenda"].forEach(id => $(id).addEventListener("input", syncCount));
 syncCount();
+
+// Presentation mode: Standard or Pyramid (answer first)
+let structure = "standard";
+function pickStructure(s) {
+  structure = s === "pyramid" ? "pyramid" : "standard";
+  document.querySelectorAll(".struct-card").forEach(b => {
+    const on = b.dataset.struct === structure;
+    b.classList.toggle("on", on);
+    b.setAttribute("aria-checked", on);
+  });
+  const pyr = structure === "pyramid";
+  $("agenda").disabled = pyr;
+  $("agendaRow").classList.toggle("off", pyr);
+  $("agendaText").textContent = pyr ? "No Sequence slide - the executive summary leads instead"
+                                    : "Add a Sequence (agenda) slide";
+  try { localStorage.setItem("slidify-structure", structure); } catch (_) {}
+}
+document.querySelectorAll(".struct-card").forEach(b => b.onclick = () => pickStructure(b.dataset.struct));
+let savedStruct = null;
+try { savedStruct = localStorage.getItem("slidify-structure"); } catch (_) {}
+pickStructure(savedStruct || "standard");
 
 // Font styles (Minimus 1, Minimus 2, Minimus 3) from fonts.json
 let chosenStyle = null, styleLabels = {};
@@ -780,7 +825,8 @@ function show(job) {
   if (job.title) $("deckTitle").textContent = job.title;
   if (job.slides && job.slides.length) {
     slides = job.slides.map(s => s + "?v=" + job.version);
-    $("deckMeta").textContent = `${slides.length} slides` + (chosenStyle && styleLabels[chosenStyle] ? ` · ${styleLabels[chosenStyle]}` : "");
+    $("deckMeta").textContent = `${slides.length} slides` + (structure === "pyramid" ? " · Pyramid" : "")
+      + (chosenStyle && styleLabels[chosenStyle] ? ` · ${styleLabels[chosenStyle]}` : "");
     $("grid").innerHTML = "";
     slides.forEach((src, i) => {
       const b = document.createElement("button");
@@ -830,7 +876,8 @@ $("form").onsubmit = async (e) => {
   fd.append("slides_n", count.n);
   fd.append("spoken", spoken ? "true" : "false");
   if (chosenStyle) fd.append("style", chosenStyle);
-  fd.append("agenda", $("agenda").checked ? "true" : "false");
+  fd.append("agenda", $("agenda").checked && structure !== "pyramid" ? "true" : "false");
+  fd.append("structure", structure);
   picked.forEach(f => fd.append("files", f));
   if (!$("brief").value.trim() && !picked.length) { $("error").textContent = "Write a topic or add a file."; return; }
   busy(true, "Uploading...");

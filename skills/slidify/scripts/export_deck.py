@@ -102,6 +102,10 @@ def render_slides(spec):
     for s in content:
         img = Image.new("RGB", (W, H), "white")
         d = ImageDraw.Draw(img)
+        if s.get("kind") == "section":                    # Pyramid "Appendix" divider
+            _centered(d, 3.3, 0.9, bd.clean(s["heading"]), bd.TITLE_PT, bd.GREY_HEADING)
+            slides.append(img)
+            continue
         hpt = bd.pick_size(bd.HEADING_SIZES, [s["heading"]], bd.TEXT_W)
         hy = int(0.45 * PX_PER_IN + (0.7 * PX_PER_IN - _pt(hpt) * 1.2) / 2)
         _text(d, _px(bd.LEFT + bd.INSET), hy, bd.clean(s["heading"]), hpt, bd.GREY_HEADING)
@@ -191,6 +195,10 @@ def write_docx(spec, path):
     if spec.get("agenda"):
         content.insert(0, {"heading": "Sequence", "lines": [s["heading"] for s in spec["slides"]]})
     for s in content:
+        if s.get("kind") == "section":
+            para(bd.clean(s["heading"]), bd.TITLE_PT, bd.GREY_HEADING, center, before=170)
+            doc.paragraphs[-1].runs[-1].add_break(WD_BREAK.PAGE)
+            continue
         para(bd.clean(s["heading"]), bd.HEADING_SIZES[0], bd.GREY_HEADING, after=24)
         lines = s.get("lines") or (s.get("left", []) + s.get("right", []))
         for line in lines:

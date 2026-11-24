@@ -51,6 +51,8 @@ If you can read PDFs, look at `reference/CMPO Gov.pdf` too: match its tone, line
    python "<skill base directory>/scripts/build_deck.py" spec.json "Deck Title.pptx" --slides 12
    ```
 
+   Pyramid mode: if the user asks for Pyramid, answer-first or an executive/recommendation deck, follow "Pyramid mode" in STYLE.md: set `"structure": "pyramid"`, give every slide a `"kind"` (summary, pillar, evidence, section, appendix), write complete-sentence headings and lines, and leave out the Sequence slide. The builder checks the pyramid order.
+
    Font style: Minimus 1 (Nirmala Text) is the default. If the user names another style (Minimus 2, Minimus 3), add `--style minimus2` etc.; styles are set in `fonts.json` and the builder says if one has no font yet.
 
    `--slides 8` means exactly 8 slides; `--slides 15-20` means 15 to 20. Leave it out for "at most 12".

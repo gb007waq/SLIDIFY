@@ -8,6 +8,11 @@ Usage:
 
 Font style: --style minimus1 (or "style" in the spec). Styles live in ../fonts.json.
 
+Structure: "structure": "pyramid" in the spec gives answer-first decks. Each slide
+then has a "kind": summary (first, the main answer), pillar (2-4), evidence
+(after its pillar), section (an "Appendix" divider, no lines) and appendix.
+Headings and lines are complete sentences (up to 14 words, still one line).
+
 Slide count (title, agenda and THANK YOU included): at most 12 by default.
 --slides 8 means exactly 8; --slides 15-20 means between 15 and 20.
 
@@ -61,6 +66,14 @@ MIN_LINES = 6            # every content slide: 6-8 lines, more when the topic n
 MAX_LINES = 8            # per slide (per column on two-column slides)
 MAX_LINE_WORDS = 12
 MAX_HEADING_WORDS = 5
+
+# Pyramid structure: answer first, 2-4 pillars with evidence, appendix last.
+# Headings and lines are complete sentences, still one line each.
+PYRAMID_KINDS = ("summary", "pillar", "evidence", "section", "appendix")
+PYRAMID_PILLARS = (2, 4)
+PYRAMID_HEADING_WORDS = 14
+PYRAMID_LINE_WORDS = 14
+PYRAMID_SHORT_MIN = 3     # executive summary and appendix slides may be shorter
 
 SLIDE_W, SLIDE_H = Inches(13.333), Inches(7.5)
 LEFT = Inches(0.7)
@@ -207,9 +220,89 @@ def validate(spec, min_slides=1, max_slides=MAX_SLIDES):
         return [str(e)]
 
 
+def _check_line(errors, label, text, limit, pt, width):
+    if "\n" in str(text):
+        errors.append(f"{label}: contains a line break: {text!r}")
+    t = clean(text)
+    if not t:
+        errors.append(f"{label}: empty.")
+    if len(t.split()) > limit:
+        errors.append(f"{label}: {len(t.split())} words (max {limit}): {t!r}")
+    if not fits_one_line(t, pt, width):
+        errors.append(f"{label}: too long for one line: {t!r}")
+
+
+def slide_errors(s, i, structure="standard", heading_width=None):
+    """Rules for one content slide (number i in the deck)."""
+    errors = []
+    pyramid = structure == "pyramid"
+    kind = s.get("kind")
+    heading_width = heading_width or TEXT_W
+    if pyramid and kind == "section":                      # e.g. "Appendix" divider
+        _check_line(errors, f"Slide {i} heading", s.get("heading", ""), 4, TITLE_PT, SLIDE_W - 2 * LEFT)
+        return errors
+    _check_line(errors, f"Slide {i} heading", s.get("heading", ""),
+                PYRAMID_HEADING_WORDS if pyramid else MAX_HEADING_WORDS, HEADING_PT, heading_width)
+    if "lines" in s:
+        cols = [("", s["lines"], TEXT_W)]
+    else:
+        cols = [("left ", s.get("left", []), COL_W), ("right ", s.get("right", []), COL_W)]
+    low = PYRAMID_SHORT_MIN if pyramid and kind in ("summary", "appendix") else MIN_LINES
+    total_lines = sum(len(c[1]) for c in cols)
+    if total_lines < low:
+        errors.append(f"Slide {i}: {total_lines} lines (needs {low}-{MAX_LINES}); add detail.")
+    for name, lines, width in cols:
+        if not lines:
+            errors.append(f"Slide {i}: {name}column has no lines.")
+        if len(lines) > MAX_LINES:
+            errors.append(f"Slide {i}: {name}{len(lines)} lines (max {MAX_LINES}).")
+        for j, line in enumerate(lines, start=1):
+            _check_line(errors, f"Slide {i} {name}line {j}", line,
+                        PYRAMID_LINE_WORDS if pyramid else MAX_LINE_WORDS, BODY_PT, width)
+    return errors
+
+
+def pyramid_errors(slides):
+    """Answer first, 2-4 pillars each followed by its evidence, then an optional appendix."""
+    errors, kinds = [], [s.get("kind") for s in slides]
+    bad = sorted({str(k) for k in kinds if k not in PYRAMID_KINDS})
+    if bad:
+        errors.append(f"Pyramid: every slide needs a kind ({', '.join(PYRAMID_KINDS)}); got {', '.join(bad)}.")
+        return errors
+    if not kinds or kinds[0] != "summary":
+        errors.append("Pyramid: the first content slide must be the executive summary (kind 'summary') "
+                      "with the main answer as its heading.")
+    if kinds.count("summary") != 1:
+        errors.append("Pyramid: exactly one executive summary slide.")
+    pillars = kinds.count("pillar")
+    if not PYRAMID_PILLARS[0] <= pillars <= PYRAMID_PILLARS[1]:
+        errors.append(f"Pyramid: {pillars} pillar slides; use {PYRAMID_PILLARS[0]}-{PYRAMID_PILLARS[1]} "
+                      "(3 is usually best).")
+    seen_pillar = in_appendix = False
+    for n, k in enumerate(kinds[1:], start=2):
+        if k == "summary":
+            continue
+        if k == "section":
+            if in_appendix:
+                errors.append("Pyramid: only one Appendix divider.")
+            in_appendix = True
+        elif k in ("pillar", "evidence") and in_appendix:
+            errors.append(f"Pyramid: content slide {n} comes after the Appendix divider; use kind 'appendix'.")
+        elif k == "evidence" and not seen_pillar:
+            errors.append(f"Pyramid: evidence slide {n} must follow the pillar it supports.")
+        elif k == "appendix" and not in_appendix:
+            errors.append(f"Pyramid: appendix slide {n} needs an Appendix divider (kind 'section') before it.")
+        if k == "pillar":
+            seen_pillar = True
+    if in_appendix and kinds[-1] == "section":
+        errors.append("Pyramid: the Appendix divider needs at least one appendix slide after it.")
+    return errors
+
+
 def _validate(spec, min_slides, max_slides):
     errors = []
     slides = spec.get("slides", [])
+    structure = spec.get("structure", "standard")
     total = slide_count(spec)
     if total > max_slides or total < min_slides:
         want = f"exactly {min_slides}" if min_slides == max_slides else (
@@ -219,37 +312,15 @@ def _validate(spec, min_slides, max_slides):
         errors.append("Missing deck title.")
     if spec.get("agenda") and len(slides) > MAX_AGENDA:
         errors.append(f"Agenda would list {len(slides)} headings (max {MAX_AGENDA}); drop the agenda.")
+    if structure == "pyramid":
+        if spec.get("agenda"):
+            errors.append("Pyramid: no Sequence slide - the executive summary is the agenda.")
+        errors += pyramid_errors(slides)
 
-    def check(label, text, limit, pt, width):
-        if "\n" in str(text):
-            errors.append(f"{label}: contains a line break: {text!r}")
-        t = clean(text)
-        if not t:
-            errors.append(f"{label}: empty.")
-        if len(t.split()) > limit:
-            errors.append(f"{label}: {len(t.split())} words (max {limit}): {t!r}")
-        if not fits_one_line(t, pt, width):
-            errors.append(f"{label}: too long for one line: {t!r}")
-
-    check("Title", spec.get("title", ""), 8, TITLE_PT, SLIDE_W - 2 * LEFT)
-
+    _check_line(errors, "Title", spec.get("title", ""), 8, TITLE_PT, SLIDE_W - 2 * LEFT)
+    width = COL_W if spec.get("agenda") and len(slides) > MAX_LINES else TEXT_W
     for i, s in enumerate(slides, start=2 + (1 if spec.get("agenda") else 0)):
-        check(f"Slide {i} heading", s.get("heading", ""), MAX_HEADING_WORDS, HEADING_PT,
-              COL_W if spec.get("agenda") and len(slides) > MAX_LINES else TEXT_W)
-        if "lines" in s:
-            cols = [("", s["lines"], TEXT_W)]
-        else:
-            cols = [("left ", s.get("left", []), COL_W), ("right ", s.get("right", []), COL_W)]
-        total_lines = sum(len(c[1]) for c in cols)
-        if total_lines < MIN_LINES:
-            errors.append(f"Slide {i}: {total_lines} lines (needs {MIN_LINES}-{MAX_LINES}); add detail.")
-        for name, lines, width in cols:
-            if not lines:
-                errors.append(f"Slide {i}: {name}column has no lines.")
-            if len(lines) > MAX_LINES:
-                errors.append(f"Slide {i}: {name}{len(lines)} lines (max {MAX_LINES}).")
-            for j, line in enumerate(lines, start=1):
-                check(f"Slide {i} {name}line {j}", line, MAX_LINE_WORDS, BODY_PT, width)
+        errors += slide_errors(s, i, structure, width)
     return errors
 
 
@@ -379,6 +450,13 @@ def closing_slide(prs, text):
     write(tf.paragraphs[0], clean(text).upper(), TITLE_PT, GREY_CLOSING, PP_ALIGN.CENTER)
 
 
+def section_slide(prs, text):
+    """Pyramid divider (e.g. Appendix): one grey word, centred, like the title slide."""
+    s = blank(prs)
+    tf = textbox(s, LEFT, Inches(3.3), SLIDE_W - 2 * LEFT, Inches(0.9), MSO_ANCHOR.MIDDLE)
+    write(tf.paragraphs[0], clean(text), TITLE_PT, GREY_HEADING, PP_ALIGN.CENTER)
+
+
 def build(spec, out_path):
     with use_style(spec.get("style")):
         _build(spec, out_path)
@@ -391,7 +469,10 @@ def _build(spec, out_path):
     if spec.get("agenda"):
         content_slide(prs, agenda_slide(spec))
     for s in spec.get("slides", []):
-        content_slide(prs, s)
+        if s.get("kind") == "section":
+            section_slide(prs, s["heading"])
+        else:
+            content_slide(prs, s)
     closing = spec.get("closing", "THANK YOU")
     if closing:
         closing_slide(prs, closing)

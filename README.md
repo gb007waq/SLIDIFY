@@ -42,6 +42,7 @@ A web page on your computer for making decks without typing in Claude Code.
 
 - **Put in:** a topic or notes (typed or spoken), plus Word (.docx), PDF, pictures or text files
 - **Speak:** press Speak, say what the presentation is about in any of 54 languages (English, Urdu, Punjabi, Sindhi, Persian, Arabic and more), press Stop. It makes the slides in English (needs Chrome or Edge)
+- **Presentation mode:** Standard (your signature, topic by topic) or **Pyramid**: answer first in an executive summary, 2-4 supporting pillars, evidence slides with facts and figures, and an appendix, all in complete sentences
 - **Font style:** Minimus 1 (Nirmala Text, 36 / 22-24 / 18-20 pt). Minimus 2 (Candara) and Minimus 3 (Mulish, free, included in `skills/slidify/fonts`), same sizes. Fonts are set in `skills/slidify/fonts.json`
 - **Slides:** 12 (standard), fewer than 12, 15 to 20, or any custom number up to 99 (long presentations are planned first, then written 40 slides at a time)
 - **Get out:** PowerPoint, PDF, slide pictures (.zip) and Word, with a preview of every slide
