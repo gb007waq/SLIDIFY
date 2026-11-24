@@ -43,15 +43,18 @@ Used when the owner picks **Pyramid**, or asks for an answer-first, executive, r
 
 | Level | Slide `kind` | What it holds |
 |---|---|---|
-| **Top: the answer** | `summary` (first content slide, exactly one) | Heading = the core recommendation or conclusion, as one complete sentence. 3-6 lines: each pillar as a complete sentence, plus the ask or next step |
+| **Top: the answer** | `summary` (first content slide, exactly one) | Heading = the core recommendation or conclusion, as one complete sentence. Lines = **every pillar heading word-for-word, in order**, then at most 2 lines with the ask or next step. Nothing else |
 | **Middle: the pillars** | `pillar` (2-4, usually 3) | Heading = one distinct, non-overlapping reason the answer holds, as a complete-sentence claim. 6-8 lines of the strongest evidence |
-| **Base: the evidence** | `evidence` (after the pillar it supports) | Heading = a complete-sentence takeaway. 6-8 lines of facts, figures, KPIs, results and comparisons |
-| **Appendix** | `section` divider (heading "Appendix", no lines), then `appendix` slides (3-8 lines) | Extra detail that would slow the story. Only when there is genuine extra detail |
+| **Base: the evidence** | `evidence` (straight after the pillar it supports) | Heading = a complete-sentence takeaway. 6-8 lines that **lead with data**: figures, percentages, money, counts, dates, before/after |
+| **Next steps** | `next` (after the last pillar's evidence) | Detail on the ask: pilot, plan, phases, costs, owners |
+| **Appendix** | `section` divider (heading "Appendix", no lines), then `appendix` slides (3-8 lines) | **Supplementary material only**: methods, definitions, data tables, metrics frameworks, extra cases, sources. Leave it out when there is nothing supplementary |
 
 - Headings and lines are **complete sentences** (subject + verb), up to 14 words, still one line, no full stops.
 - Headings state the "so what", never a topic label: "Solar cuts school power bills by 70 percent", not "Cost Savings".
-- Lead with numbers where you have them.
+- **Data first:** aim for at least half of each evidence slide's lines to carry a concrete figure, taken from the sources or well-established facts. **Never invent or estimate statistics**; where no reliable figure exists, use a specific named example (a place, project, law or date).
+- **Nothing that supports a pillar goes in the appendix**; it belongs in that pillar's evidence.
 - No Sequence slide: the executive summary is the agenda.
+- The builder rejects a deck where a pillar heading is missing from the summary, is out of order, or where the summary has more than 2 non-pillar lines.
 
 ```
 KP should solarise all public schools by 2028                      (summary)

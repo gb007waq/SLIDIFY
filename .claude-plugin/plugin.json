@@ -1,6 +1,6 @@
 {
   "name": "slidify",
-  "version": "1.7.0",
+  "version": "1.8.0",
   "description": "SLIDIFY: an agent that makes PowerPoint decks in the owner's signature style - white slides, grey headings, plain black one-liners, Nirmala Text, 12 slides max.",
   "author": {
     "name": "gb007waq"

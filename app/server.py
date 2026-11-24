@@ -135,18 +135,27 @@ def content_rule(job):
 
 PYRAMID_GUIDE = """STRUCTURE: PYRAMID (answer first). Build the deck top-down:
 - TOP - the answer. The first content slide is the executive summary (kind "summary"):
-  its heading is the core recommendation or conclusion as one complete sentence;
-  its 3-6 lines state each supporting pillar as a complete sentence, plus the ask or next step.
+  its heading is the core recommendation or conclusion as one complete sentence.
+  Its lines are EXACTLY: every pillar heading copied word-for-word, in the same order as the pillar
+  slides, then at most 2 lines with the ask / next step. No other lines. (The builder checks this.)
 - MIDDLE - the pillars. 2-4 pillar slides (kind "pillar"; 3 is usually best), each a distinct,
-  non-overlapping reason the answer holds. Each pillar heading is a complete-sentence claim
-  (the "so what", not a topic label); its 6-8 lines give the strongest evidence for it.
-- BASE - the evidence. After a pillar, add evidence slides (kind "evidence") that back it with
-  facts, figures, KPIs, results and comparisons. Every heading is a complete-sentence takeaway.
-- APPENDIX - extra detail that would slow the story goes last: a divider slide
-  {"kind": "section", "heading": "Appendix"} (no lines) followed by appendix slides (kind "appendix", 3-8 lines).
-  Only add an appendix when there is genuine extra detail.
+  non-overlapping reason the answer holds (mutually exclusive, together covering the case).
+  Each pillar heading is a complete-sentence claim (the "so what", not a topic label);
+  its 6-8 lines give the strongest evidence for it.
+- BASE - the evidence. Straight after its pillar, add evidence slides (kind "evidence") that back it.
+  Evidence LEADS WITH DATA: figures, percentages, money, counts, dates, rankings and before/after
+  comparisons - aim for at least half the lines carrying a concrete figure. Take figures from the
+  source files or well-established public facts. NEVER invent or estimate statistics to fill a line;
+  where no reliable figure exists, use a specific named example (a place, project, law or date) instead.
+  Every evidence heading is a complete-sentence takeaway.
+- NEXT STEPS - when the ask needs detail (a pilot, plan, phases, costs, owners), add slides of
+  kind "next" after the last pillar's evidence. Their headings are complete sentences.
+- APPENDIX - only genuinely supplementary material: methods, definitions, data tables, metrics
+  frameworks, extra cases, sources. A divider {"kind": "section", "heading": "Appendix"} (no lines),
+  then appendix slides (kind "appendix", 3-8 lines). Anything that supports a pillar belongs in that
+  pillar's evidence, NOT in the appendix. Leave the appendix out when there is nothing supplementary.
 Writing: headings and lines are COMPLETE SENTENCES (subject + verb), up to 14 words, still exactly
-one line each, no full stops. Lead with numbers where you have them ("Bills fell 70 percent in Mardan pilot").
+one line each, no full stops. Lead with the number ("Bills fell 70 percent in the Mardan pilot").
 No Sequence/agenda slide - the executive summary is the agenda."""
 
 
@@ -158,7 +167,7 @@ def first_prompt(job):
                  "Builder limits: every line must fit on one line of a 16:9 slide at 20 pt",
                  "(two-column lines are half width); pillar and evidence slides have 6-8 lines."]
         schema = ('{"title": str, "date": str, "structure": "pyramid", "agenda": false, "slides": ['
-                  '{"kind": "summary"|"pillar"|"evidence"|"section"|"appendix", "heading": str, "lines": [str]}'
+                  '{"kind": "summary"|"pillar"|"evidence"|"next"|"section"|"appendix", "heading": str, "lines": [str]}'
                   ' or {"kind": ..., "heading": str, "left": [str], "right": [str]}]}')
     else:
         rules = ["LINES PER SLIDE: every content slide has 6 to 8 one-liners - 6 when the topic is simple,",
@@ -263,7 +272,7 @@ def write_big(jid, job, folder):
     schema_start = plan.index("Reply with ONLY JSON")
     schema_line = plan[schema_start:].split("\n")[1]
     if pyramid:
-        plan_schema = ('{"title": str, "date": str, "outline": [{"kind": "summary"|"pillar"|"evidence"|"section"|"appendix",'
+        plan_schema = ('{"title": str, "date": str, "outline": [{"kind": "summary"|"pillar"|"evidence"|"next"|"section"|"appendix",'
                        ' "heading": str}]}  ' f"- exactly {k} entries in presentation order, following the pyramid structure.")
     else:
         plan_schema = ('{"title": str, "date": str, "agenda": bool, "headings": [str]}  '
@@ -390,7 +399,8 @@ def make_deck(jid, prompt, session=None, limits=(1, bd.MAX_SLIDES), feedback=Non
                 raise RuntimeError("Some lines still break the style: " + "; ".join(errors[:4]))
             set_job(jid, message=f"Tightening {len(errors)} line(s) that break the style...")
             fix = ("The builder rejected the deck:\n" + "\n".join("- " + e for e in errors) +
-                   "\nShorten those lines (never split them) and reply with the full corrected JSON spec only.")
+                   "\nFix every problem: shorten long lines (never split them), add detail to thin slides, and "
+                   "repair any structure problem exactly as described. Reply with the full corrected JSON spec only.")
             text, session = run_claude(fix, folder, session, wait)
             spec = extract_spec(text)
 
@@ -526,8 +536,8 @@ def revise(jid):
               f"\n\nKeep the slide count rule ({count_rule(job)}) unless the owner asks for a different number"
               f" (3 to {MAX_CUSTOM} slides allowed)."
               + ("\n\nThis is a PYRAMID deck: keep the answer-first structure and every slide's kind "
-                 "(summary first, 2-4 pillars each followed by its evidence, optional Appendix divider and "
-                 "appendix slides), with complete-sentence headings and lines."
+                 "(summary first and listing every pillar word-for-word, 2-4 pillars each followed by its evidence, "
+                 "optional next-steps slides, optional Appendix divider and appendix slides), with complete-sentence headings and lines."
                  if job.get("structure") == "pyramid" else "") +
               "\n\nCurrent deck:\n```json\n" + json.dumps(job.get("spec", {}), ensure_ascii=False) +
               "\n```\nReply with the full updated JSON spec only.")

@@ -9,8 +9,10 @@ Usage:
 Font style: --style minimus1 (or "style" in the spec). Styles live in ../fonts.json.
 
 Structure: "structure": "pyramid" in the spec gives answer-first decks. Each slide
-then has a "kind": summary (first, the main answer), pillar (2-4), evidence
-(after its pillar), section (an "Appendix" divider, no lines) and appendix.
+then has a "kind": summary (first, the main answer; its lines repeat every pillar
+heading word-for-word plus at most 2 ask lines), pillar (2-4), evidence (after its
+pillar), next (detail on the ask, after the pillars), section (an "Appendix"
+divider, no lines) and appendix (supplementary detail only).
 Headings and lines are complete sentences (up to 14 words, still one line).
 
 Slide count (title, agenda and THANK YOU included): at most 12 by default.
@@ -69,7 +71,8 @@ MAX_HEADING_WORDS = 5
 
 # Pyramid structure: answer first, 2-4 pillars with evidence, appendix last.
 # Headings and lines are complete sentences, still one line each.
-PYRAMID_KINDS = ("summary", "pillar", "evidence", "section", "appendix")
+PYRAMID_KINDS = ("summary", "pillar", "evidence", "next", "section", "appendix")
+PYRAMID_MAX_ASKS = 2      # summary lines that are not pillars (the ask / next step)
 PYRAMID_PILLARS = (2, 4)
 PYRAMID_HEADING_WORDS = 14
 PYRAMID_LINE_WORDS = 14
@@ -262,8 +265,36 @@ def slide_errors(s, i, structure="standard", heading_width=None):
     return errors
 
 
+def _norm(text):
+    return re.sub(r"[^\w%]+", " ", clean(text).lower()).strip()
+
+
 def pyramid_errors(slides):
-    """Answer first, 2-4 pillars each followed by its evidence, then an optional appendix."""
+    """Answer first, 2-4 pillars each followed by its evidence, next steps, then an optional appendix."""
+    errors = _pyramid_order_errors(slides)
+    if errors:
+        return errors
+    # The summary must state every pillar word-for-word, in order, plus at most 2 ask lines.
+    summary = slides[0]
+    lines = summary.get("lines") or (summary.get("left", []) + summary.get("right", []))
+    said = [_norm(x) for x in lines]
+    pillars = [s.get("heading", "") for s in slides if s.get("kind") == "pillar"]
+    missing = [p for p in pillars if _norm(p) not in said]
+    for p in missing:
+        errors.append(f"Pyramid: pillar heading {clean(p)!r} must appear word-for-word as a line on the "
+                      "executive summary.")
+    if not missing:
+        order = [said.index(_norm(p)) for p in pillars]
+        if order != sorted(order):
+            errors.append("Pyramid: list the pillars on the executive summary in the same order as the pillar slides.")
+        asks = len(said) - len(pillars)
+        if asks > PYRAMID_MAX_ASKS:
+            errors.append(f"Pyramid: the executive summary has {asks} lines that are not pillars; keep at most "
+                          f"{PYRAMID_MAX_ASKS} (the ask / next step) - every other line must be a pillar.")
+    return errors
+
+
+def _pyramid_order_errors(slides):
     errors, kinds = [], [s.get("kind") for s in slides]
     bad = sorted({str(k) for k in kinds if k not in PYRAMID_KINDS})
     if bad:
@@ -278,7 +309,7 @@ def pyramid_errors(slides):
     if not PYRAMID_PILLARS[0] <= pillars <= PYRAMID_PILLARS[1]:
         errors.append(f"Pyramid: {pillars} pillar slides; use {PYRAMID_PILLARS[0]}-{PYRAMID_PILLARS[1]} "
                       "(3 is usually best).")
-    seen_pillar = in_appendix = False
+    seen_pillar = in_next = in_appendix = False
     for n, k in enumerate(kinds[1:], start=2):
         if k == "summary":
             continue
@@ -286,14 +317,21 @@ def pyramid_errors(slides):
             if in_appendix:
                 errors.append("Pyramid: only one Appendix divider.")
             in_appendix = True
-        elif k in ("pillar", "evidence") and in_appendix:
+        elif k in ("pillar", "evidence", "next") and in_appendix:
             errors.append(f"Pyramid: content slide {n} comes after the Appendix divider; use kind 'appendix'.")
+        elif k in ("pillar", "evidence") and in_next:
+            errors.append(f"Pyramid: slide {n} ({k}) comes after the next-steps slides; put every pillar and "
+                          "its evidence before the next steps.")
         elif k == "evidence" and not seen_pillar:
             errors.append(f"Pyramid: evidence slide {n} must follow the pillar it supports.")
+        elif k == "next" and not seen_pillar:
+            errors.append(f"Pyramid: next-steps slide {n} must come after the pillars.")
         elif k == "appendix" and not in_appendix:
             errors.append(f"Pyramid: appendix slide {n} needs an Appendix divider (kind 'section') before it.")
         if k == "pillar":
             seen_pillar = True
+        if k == "next":
+            in_next = True
     if in_appendix and kinds[-1] == "section":
         errors.append("Pyramid: the Appendix divider needs at least one appendix slide after it.")
     return errors
