@@ -42,7 +42,6 @@ A web page on your computer for making decks without typing in Claude Code.
 
 - **Put in:** a topic or notes (typed or spoken), plus Word (.docx), PDF, pictures or text files
 - **Speak:** press Speak, say what the presentation is about in any of 54 languages (English, Urdu, Punjabi, Sindhi, Persian, Arabic and more), press Stop. It makes the slides in English (needs Chrome or Edge)
-- **Font style:** Neat 1 (Nirmala Text, 36 / 22-24 / 18-20 pt). Neat 2 (Candara) and Neat 3 (Mulish, free, included in `skills/slidify/fonts`), same sizes. Fonts are set in `skills/slidify/fonts.json`
 - **Slides:** 12 (standard), fewer than 12, 15 to 20, or any custom number up to 99 (long presentations are planned first, then written 40 slides at a time)
 - **Get out:** PowerPoint, PDF, slide pictures (.zip) and Word, with a preview of every slide
 - **Change something:** type what to change ("merge slides 4 & 5") and it rebuilds the deck
@@ -74,7 +73,5 @@ Build by hand from a spec:
 ```powershell
 python skills\slidify\scripts\build_deck.py examples\sample.json examples\sample.pptx
 ```
-
-`install-fonts.ps1` installs the included fonts (Mulish) for PowerPoint and Word.
 
 `install.ps1` is an alternative to the plugin: it copies the skill straight into `~/.claude/skills`.

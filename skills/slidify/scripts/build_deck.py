@@ -4,9 +4,7 @@ Builds a .pptx in the Slidify signature style (see ../STYLE.md) from a JSON
 spec, and refuses any spec that breaks the style rules.
 
 Usage:
-    python build_deck.py spec.json [output.pptx] [--slides N | --slides A-B] [--style neat1]
-
-Font style: --style neat1 (or "style" in the spec). Styles live in ../fonts.json.
+    python build_deck.py spec.json [output.pptx] [--slides N | --slides A-B]
 
 Slide count (title, agenda and THANK YOU included): at most 12 by default.
 --slides 8 means exactly 8; --slides 15-20 means between 15 and 20.
@@ -32,8 +30,6 @@ Optional logos: put PNG files in the skill's assets/ folder:
 import json
 import re
 import sys
-import threading
-from contextlib import contextmanager
 from pathlib import Path
 
 from pptx import Presentation
@@ -79,72 +75,12 @@ FONT_FILE = Path(r"C:\Windows\Fonts\Nirmala.ttc")
 FONT_INDEX = 3  # "Nirmala Text Regular" inside Nirmala.ttc
 
 
-# ---- Font styles (Neat 1, Neat 2, Neat 3...) --------------------------------
-STYLES_FILE = SKILL_DIR / "fonts.json"
-_style_lock = threading.RLock()
-
-
-def load_styles():
-    data = json.loads(STYLES_FILE.read_text(encoding="utf-8"))
-    return data.get("default", "neat1"), data["styles"]
-
-
-def style_ready(st):
-    return bool(st.get("font"))
-
-
-def style_file(st):
-    """First font file that exists (file may be one path or a list), else the fallback.
-    Returns (path or None, is_fallback)."""
-    import os
-    files = st.get("file") or []
-    if isinstance(files, str):
-        files = [files]
-    for f in files:
-        p = Path(os.path.expandvars(f))
-        if not p.is_absolute():
-            p = SKILL_DIR / p
-        if p.exists():
-            return p, False
-    fb = st.get("fallback_file")
-    if fb and Path(os.path.expandvars(fb)).exists():
-        return Path(os.path.expandvars(fb)), True
-    return None, True
-
-
-@contextmanager
-def use_style(name=None):
-    """Apply a font style (font, file and sizes) while building or checking a deck."""
-    global FONT, FONT_FILE, FONT_INDEX, TITLE_PT, HEADING_SIZES, BODY_SIZES, HEADING_PT, BODY_PT
-    default, styles = load_styles()
-    name = name or default
-    if name not in styles:
-        raise ValueError(f"Unknown font style {name!r}. Choose one of: {', '.join(styles)}")
-    st = styles[name]
-    if not style_ready(st):
-        raise ValueError(f"{st.get('label', name)} has no font yet.")
-    with _style_lock:
-        saved = (FONT, FONT_FILE, FONT_INDEX, TITLE_PT, HEADING_SIZES, BODY_SIZES)
-        f, fallback = style_file(st)
-        FONT, FONT_FILE = st["font"], f
-        FONT_INDEX = 0 if fallback else int(st.get("index", 0))
-        TITLE_PT = st.get("title_pt", TITLE_PT)
-        HEADING_SIZES = tuple(st.get("heading_pt", HEADING_SIZES))
-        BODY_SIZES = tuple(st.get("body_pt", BODY_SIZES))
-        HEADING_PT, BODY_PT = HEADING_SIZES[-1], BODY_SIZES[-1]
-        try:
-            yield st
-        finally:
-            FONT, FONT_FILE, FONT_INDEX, TITLE_PT, HEADING_SIZES, BODY_SIZES = saved
-            HEADING_PT, BODY_PT = HEADING_SIZES[-1], BODY_SIZES[-1]
-
-
 # ---- Line-fit measurement --------------------------------------------------
 _measure_cache = {}
 
 
 def MEASURE(text, pt):
-    """Width in points of text in the current style's font, or None if it can't be measured."""
+    """Width in points of text in Nirmala Text, or None if it can't be measured."""
     try:
         from PIL import ImageFont
     except ImportError:
@@ -199,15 +135,6 @@ def agenda_slide(spec):
 
 
 def validate(spec, min_slides=1, max_slides=MAX_SLIDES):
-    """Style check in the deck's own font style (spec['style'], default Neat 1)."""
-    try:
-        with use_style(spec.get("style")):
-            return _validate(spec, min_slides, max_slides)
-    except ValueError as e:
-        return [str(e)]
-
-
-def _validate(spec, min_slides, max_slides):
     errors = []
     slides = spec.get("slides", [])
     total = slide_count(spec)
@@ -380,11 +307,6 @@ def closing_slide(prs, text):
 
 
 def build(spec, out_path):
-    with use_style(spec.get("style")):
-        _build(spec, out_path)
-
-
-def _build(spec, out_path):
     prs = Presentation()
     prs.slide_width, prs.slide_height = SLIDE_W, SLIDE_H
     title_slide(prs, spec["title"], spec.get("date"))
@@ -400,31 +322,25 @@ def _build(spec, out_path):
 
 def split_args(argv):
     """Pull '--slides N' or '--slides A-B' out of argv. Default: at most 12."""
-    args, limits, style = [], (1, MAX_SLIDES), None
+    args, limits = [], (1, MAX_SLIDES)
     it = iter(argv)
     for a in it:
         if a == "--slides":
             limits = parse_slides(next(it))
         elif a.startswith("--slides="):
             limits = parse_slides(a.split("=", 1)[1])
-        elif a == "--style":
-            style = next(it)
-        elif a.startswith("--style="):
-            style = a.split("=", 1)[1]
         else:
             args.append(a)
-    return args, limits, style
+    return args, limits
 
 
 def main():
-    args, (lo, hi), style = split_args(sys.argv[1:])
+    args, (lo, hi) = split_args(sys.argv[1:])
     if not args:
         print(__doc__)
         sys.exit(2)
     spec_path = Path(args[0])
     spec = json.loads(spec_path.read_text(encoding="utf-8-sig"))
-    if style:
-        spec["style"] = style
     out = Path(args[1]) if len(args) > 1 else spec_path.with_suffix(".pptx")
 
     errors = validate(spec, lo, hi)

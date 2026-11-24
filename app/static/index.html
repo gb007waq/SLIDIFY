@@ -127,22 +127,6 @@
   .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   .hint { color: var(--grey-4); font-size: 12px; margin: 8px 0 0; }
 
-  /* font style cards */
-  .styles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-  .style-card { position: relative; text-align: left; border: 1px solid var(--line); background: #fff; border-radius: 12px;
-                padding: 10px 12px 11px; cursor: pointer; min-width: 0;
-                transition: border-color .2s, box-shadow .2s, transform .2s var(--ease); }
-  .style-card:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 10px 22px -14px rgba(0,0,0,.45); }
-  .style-card.on { border-color: var(--grey-1); box-shadow: inset 0 0 0 1px var(--grey-1); }
-  .style-card.on::after { content: ""; position: absolute; top: 9px; right: 9px; width: 16px; height: 16px; border-radius: 50%;
-                          background: var(--grey-1) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 8.2l2.6 2.6L12 5.4' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/12px no-repeat;
-                          animation: pop .25s var(--ease) both; }
-  .style-card:disabled { cursor: default; background: var(--wash); }
-  .style-card b { display: block; font-weight: 400; font-size: 14px; color: var(--grey-2); }
-  .style-card .aa { display: block; font-size: 28px; line-height: 1.2; color: var(--ink); margin: 2px 0 3px; }
-  .style-card:disabled .aa { color: var(--grey-4); }
-  .style-card small { display: block; font-size: 11.5px; line-height: 1.35; color: var(--grey-3); overflow-wrap: anywhere; }
-
   /* buttons */
   .btn { position: relative; overflow: hidden; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
          border-radius: 10px; padding: 10px 16px; cursor: pointer; font-size: 15px; text-decoration: none;
@@ -260,7 +244,6 @@
     .empty { aspect-ratio: auto; padding: 36px 16px; }
     .downloads .new { margin-left: 0; }
   }
-  @media (max-width: 420px) { .styles { grid-template-columns: 1fr 1fr 1fr; gap: 6px; } .style-card { padding: 8px; } .style-card .aa { font-size: 22px; } }
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
   }
@@ -347,8 +330,6 @@
       </div>
       <p class="hint" id="countHint">Title, Sequence and THANK YOU slides are included in the count.</p>
 
-      <label class="title" id="stylesLabel">Font style</label>
-      <div class="styles" id="styles" role="radiogroup" aria-labelledby="stylesLabel"></div>
 
       <label class="check"><input type="checkbox" id="agenda" checked> Add a Sequence (agenda) slide</label>
     </section>
@@ -446,48 +427,6 @@ function syncCount() {
 ["slidesMode", "fewerN", "customN", "agenda"].forEach(id => $(id).addEventListener("input", syncCount));
 syncCount();
 
-// Font styles (Neat 1, Neat 2, Neat 3) from fonts.json
-let chosenStyle = null, styleLabels = {};
-function pickStyle(id) {
-  chosenStyle = id;
-  document.querySelectorAll(".style-card").forEach(b => {
-    const on = b.dataset.id === id;
-    b.classList.toggle("on", on);
-    b.setAttribute("aria-checked", on);
-  });
-  try { localStorage.setItem("slidify-style", id); } catch (_) {}
-}
-fetch("/api/styles").then(r => r.json()).then(({ default: def, styles }) => {
-  const box = $("styles");
-  styles.forEach(s => {
-    styleLabels[s.id] = s.label;
-    const b = document.createElement("button");
-    b.type = "button"; b.className = "style-card"; b.dataset.id = s.id;
-    b.setAttribute("role", "radio");
-    b.disabled = !s.ready;
-    b.innerHTML = `<b></b><span class="aa">Aa</span><small></small><small class="sizes"></small>`;
-    b.querySelector("b").textContent = s.label;
-    if (s.ready) {
-      b.querySelector(".aa").style.fontFamily = `"${s.font}", var(--font)`;
-      b.querySelector("small").textContent = s.font;
-      b.querySelector(".sizes").textContent = `${s.title_pt} · ${s.heading_pt.slice().reverse().join("-")} · ${s.body_pt.slice().reverse().join("-")} pt`;
-      if (s.stand_in) {
-        const n = document.createElement("small");
-        n.textContent = "Preview uses a stand-in font";
-        b.appendChild(n);
-      }
-      b.title = `${s.font}: title ${s.title_pt} pt, headings ${s.heading_pt.slice().reverse().join("-")} pt, body ${s.body_pt.slice().reverse().join("-")} pt`;
-    } else {
-      b.querySelector("small").textContent = "Font coming soon";
-    }
-    b.onclick = () => pickStyle(s.id);
-    box.appendChild(b);
-  });
-  let saved = null;
-  try { saved = localStorage.getItem("slidify-style"); } catch (_) {}
-  const ok = (id) => styles.some(s => s.id === id && s.ready);
-  pickStyle(ok(saved) ? saved : def);
-}).catch(() => { $("styles").textContent = "Font styles unavailable - using Neat 1."; });
 
 // Speaking languages (slides are always written in English)
 const LANGS = [
@@ -695,7 +634,7 @@ function show(job) {
   if (job.title) $("deckTitle").textContent = job.title;
   if (job.slides && job.slides.length) {
     slides = job.slides.map(s => s + "?v=" + job.version);
-    $("deckMeta").textContent = `${slides.length} slides` + (chosenStyle && styleLabels[chosenStyle] ? ` · ${styleLabels[chosenStyle]}` : "");
+    $("deckMeta").textContent = `${slides.length} slides`;
     $("grid").innerHTML = "";
     slides.forEach((src, i) => {
       const b = document.createElement("button");
@@ -744,7 +683,6 @@ $("form").onsubmit = async (e) => {
   fd.append("slides_mode", count.mode);
   fd.append("slides_n", count.n);
   fd.append("spoken", spoken ? "true" : "false");
-  if (chosenStyle) fd.append("style", chosenStyle);
   fd.append("agenda", $("agenda").checked ? "true" : "false");
   picked.forEach(f => fd.append("files", f));
   if (!$("brief").value.trim() && !picked.length) { $("error").textContent = "Write a topic or add a file."; return; }
