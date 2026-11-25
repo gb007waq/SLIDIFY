@@ -44,7 +44,9 @@ from contextlib import contextmanager
 from pathlib import Path
 
 from pptx import Presentation
+from pptx.chart.data import CategoryChartData
 from pptx.dml.color import RGBColor
+from pptx.enum.chart import XL_CHART_TYPE, XL_LABEL_POSITION
 from pptx.enum.shapes import MSO_CONNECTOR
 from pptx.enum.text import MSO_ANCHOR, MSO_AUTO_SIZE, PP_ALIGN
 from pptx.oxml.ns import qn
@@ -71,8 +73,27 @@ MAX_HEADING_WORDS = 5
 
 # Pyramid structure: answer first, 2-4 pillars with evidence, appendix last.
 # Headings and lines are complete sentences, still one line each.
-PYRAMID_KINDS = ("summary", "pillar", "evidence", "next", "section", "appendix")
+PYRAMID_KINDS = ("summary", "pillar", "evidence", "data", "next", "section", "appendix")
 PYRAMID_MAX_ASKS = 2      # summary lines that are not pillars (the ask / next step)
+
+# Pyramid pillar / evidence / next slides use three tiers, each a step lighter
+# ("Urban Smoke and Steel" greys): the fact (2, slightly thick), proving it (4), evidence (2).
+TIERS = (("fact", 2), ("proof", 4), ("evidence", 2))
+TIER_KINDS = ("pillar", "evidence", "next")
+TIER_COLORS = (RGBColor(0x2C, 0x31, 0x37), RGBColor(0x47, 0x4E, 0x56), RGBColor(0x5F, 0x68, 0x74))
+TIER_GAPS_PT = (12, 36, 52)   # between lines in a tier, after the fact, after the proof
+SEMIBOLD_PT = 0.3             # hairline outline that makes the fact lines a little thick
+
+
+# Pyramid data slides (the base): big KPI numbers and / or one grey bar chart.
+KPI_COUNT = (2, 4)
+KPI_PT, KPI_LABEL_PT, CHART_PT = 36, 18, 18
+CHART_BARS = (2, 8)
+CHART_AXIS = RGBColor(0xD0, 0xD3, 0xD8)
+
+
+def is_tiered(s):
+    return any(k in s for k, _ in TIERS)
 PYRAMID_PILLARS = (2, 4)
 PYRAMID_HEADING_WORDS = 14
 PYRAMID_LINE_WORDS = 14
@@ -246,6 +267,19 @@ def slide_errors(s, i, structure="standard", heading_width=None):
         return errors
     _check_line(errors, f"Slide {i} heading", s.get("heading", ""),
                 PYRAMID_HEADING_WORDS if pyramid else MAX_HEADING_WORDS, HEADING_PT, heading_width)
+    if pyramid and kind == "data":                           # KPIs and / or a grey bar chart
+        return errors + data_errors(s, i)
+    if pyramid and kind in TIER_KINDS:                       # 2 fact / 4 proof / 2 evidence
+        for name, want in TIERS:
+            got = s.get(name)
+            if not isinstance(got, list) or len(got) != want:
+                n = len(got) if isinstance(got, list) else 0
+                errors.append(f"Slide {i}: '{name}' needs exactly {want} sentences (has {n}). "
+                              "Tiered slides are 2 fact, 4 proof, 2 evidence.")
+                continue
+            for j, line in enumerate(got, start=1):
+                _check_line(errors, f"Slide {i} {name} {j}", line, PYRAMID_LINE_WORDS, BODY_PT, TEXT_W)
+        return errors
     if "lines" in s:
         cols = [("", s["lines"], TEXT_W)]
     else:
@@ -317,13 +351,13 @@ def _pyramid_order_errors(slides):
             if in_appendix:
                 errors.append("Pyramid: only one Appendix divider.")
             in_appendix = True
-        elif k in ("pillar", "evidence", "next") and in_appendix:
+        elif k in ("pillar", "evidence", "data", "next") and in_appendix:
             errors.append(f"Pyramid: content slide {n} comes after the Appendix divider; use kind 'appendix'.")
-        elif k in ("pillar", "evidence") and in_next:
+        elif k in ("pillar", "evidence", "data") and in_next:
             errors.append(f"Pyramid: slide {n} ({k}) comes after the next-steps slides; put every pillar and "
                           "its evidence before the next steps.")
-        elif k == "evidence" and not seen_pillar:
-            errors.append(f"Pyramid: evidence slide {n} must follow the pillar it supports.")
+        elif k in ("evidence", "data") and not seen_pillar:
+            errors.append(f"Pyramid: {k} slide {n} must follow the pillar it supports.")
         elif k == "next" and not seen_pillar:
             errors.append(f"Pyramid: next-steps slide {n} must come after the pillars.")
         elif k == "appendix" and not in_appendix:
@@ -379,7 +413,7 @@ def textbox(slide, left, top, width, height, anchor=MSO_ANCHOR.TOP):
     return tf
 
 
-def write(paragraph, text, pt, color, align=None):
+def write(paragraph, text, pt, color, align=None, semibold=False):
     if align is not None:
         paragraph.alignment = align
     r = paragraph.add_run()
@@ -394,6 +428,39 @@ def write(paragraph, text, pt, color, align=None):
             el = rPr.makeelement(qn(tag), {})
             rPr.append(el)
         el.set("typeface", FONT)
+    if semibold:   # "a little thick": hairline outline in the text colour (lighter than bold)
+        ln = rPr.makeelement(qn("a:ln"), {"w": str(int(Pt(SEMIBOLD_PT)))})
+        fill = ln.makeelement(qn("a:solidFill"), {})
+        fill.append(fill.makeelement(qn("a:srgbClr"), {"val": str(color)}))
+        ln.append(fill)
+        rPr.insert(0, ln)
+
+
+def tier_lines(spec):
+    """[(text, tier index)] for a tiered slide: fact, proof, evidence."""
+    return [(t, n) for n, (name, _) in enumerate(TIERS) for t in spec.get(name, [])]
+
+
+def tier_layout(spec, pt):
+    """Space after each line (pt), scaled down only if the tiers would not fit."""
+    rows = tier_lines(spec)
+    gaps = []
+    for k, (_, tier) in enumerate(rows):
+        last = k == len(rows) - 1
+        nxt = None if last else rows[k + 1][1]
+        gaps.append(0 if last else (TIER_GAPS_PT[0] if nxt == tier else TIER_GAPS_PT[tier + 1]))
+    room = Emu(BODY_BOTTOM - BODY_TOP).pt - len(rows) * pt * 1.2
+    scale = min(1.0, room / max(1, sum(gaps)))
+    return rows, [g * scale for g in gaps]
+
+
+def tiered_box(slide, spec, pt):
+    rows, gaps = tier_layout(spec, pt)
+    tf = textbox(slide, LEFT, BODY_TOP, TEXT_W, SLIDE_H - BODY_TOP - Inches(0.6))
+    for k, ((text, tier), gap) in enumerate(zip(rows, gaps)):
+        p = tf.paragraphs[0] if k == 0 else tf.add_paragraph()
+        p.space_after = Pt(gap)
+        write(p, clean(text), pt, TIER_COLORS[tier], semibold=(tier == 0))
 
 
 def picture(slide, name, left, top, height):
@@ -466,7 +533,10 @@ def content_slide(prs, spec):
     s = blank(prs)
     heading(s, spec["heading"])
     top = BODY_TOP
-    if "lines" in spec:
+    if is_tiered(spec):
+        pt = pick_size(BODY_SIZES, [t for t, _ in tier_lines(spec)], TEXT_W)
+        tiered_box(s, spec, pt)
+    elif "lines" in spec:
         pt = pick_size(BODY_SIZES, spec["lines"], TEXT_W)
         lines_box(s, LEFT, top, TEXT_W, spec["lines"], pt)
     else:
@@ -486,6 +556,108 @@ def closing_slide(prs, text):
     s = blank(prs)
     tf = textbox(s, LEFT, Inches(3.3), SLIDE_W - 2 * LEFT, Inches(0.9), MSO_ANCHOR.MIDDLE)
     write(tf.paragraphs[0], clean(text).upper(), TITLE_PT, GREY_CLOSING, PP_ALIGN.CENTER)
+
+
+def data_layout(s):
+    """Where the KPI row and the chart sit on a Pyramid data slide (EMU)."""
+    kpis, chart = s.get("kpis") or [], s.get("chart")
+    body_h = BODY_BOTTOM - BODY_TOP
+    if kpis and chart:
+        kpi_top, chart_top = BODY_TOP, BODY_TOP + Inches(1.55)
+    elif kpis:
+        kpi_top, chart_top = BODY_TOP + int((body_h - Inches(1.3)) / 2), None
+    else:
+        kpi_top, chart_top = None, BODY_TOP
+    cell_w = int(TEXT_W / max(1, len(kpis))) if kpis else 0
+    return {"kpi_top": kpi_top, "cell_w": cell_w, "chart_top": chart_top,
+            "chart_box": (LEFT, chart_top, TEXT_W, BODY_BOTTOM - chart_top) if chart else None}
+
+
+def chart_unit(chart):
+    u = str(chart.get("unit") or "").strip()
+    return (" " + u) if u and u[0].isalnum() else u
+
+
+def fmt_value(v, unit=""):
+    v = float(v)
+    txt = f"{v:,.0f}" if v.is_integer() else f"{v:,.1f}"
+    return txt + unit
+
+
+def data_errors(s, i):
+    errors, kpis, chart = [], s.get("kpis") or [], s.get("chart")
+    if not kpis and not chart:
+        return [f"Slide {i}: a data slide needs 'kpis' (2-4 big numbers) and/or a 'chart'."]
+    if kpis:
+        if not KPI_COUNT[0] <= len(kpis) <= KPI_COUNT[1]:
+            errors.append(f"Slide {i}: {len(kpis)} KPIs; use {KPI_COUNT[0]}-{KPI_COUNT[1]}.")
+        cell = int(TEXT_W / max(1, len(kpis)))
+        for j, k in enumerate(kpis, start=1):
+            if not isinstance(k, dict) or not str(k.get("value", "")).strip() or not str(k.get("label", "")).strip():
+                errors.append(f"Slide {i} KPI {j}: needs a 'value' (e.g. \"70%\") and a short 'label'.")
+                continue
+            _check_line(errors, f"Slide {i} KPI {j} value", k["value"], 3, KPI_PT, cell)
+            _check_line(errors, f"Slide {i} KPI {j} label", k["label"], 6, KPI_LABEL_PT, cell)
+    if chart:
+        bars = chart.get("bars") if isinstance(chart, dict) else None
+        if not isinstance(bars, list) or not CHART_BARS[0] <= len(bars) <= CHART_BARS[1]:
+            errors.append(f"Slide {i}: the chart needs {CHART_BARS[0]}-{CHART_BARS[1]} bars.")
+        else:
+            slot = int(TEXT_W / len(bars))
+            for j, b in enumerate(bars, start=1):
+                v = b.get("value") if isinstance(b, dict) else None
+                if isinstance(v, bool) or not isinstance(v, (int, float)) or v < 0:
+                    errors.append(f"Slide {i} bar {j}: 'value' must be a number of 0 or more.")
+                    continue
+                _check_line(errors, f"Slide {i} bar {j} label", b.get("label", ""), 3, CHART_PT, slot)
+    return errors
+
+
+def data_slide(prs, spec):
+    """Pyramid base: 2-4 big KPI numbers and / or one grey bar chart (a real PowerPoint chart)."""
+    s = blank(prs)
+    heading(s, spec["heading"])
+    lay = data_layout(spec)
+    for n, k in enumerate(spec.get("kpis") or []):
+        x = LEFT + n * lay["cell_w"]
+        tf = textbox(s, x, lay["kpi_top"], lay["cell_w"], Inches(0.8), MSO_ANCHOR.BOTTOM)
+        write(tf.paragraphs[0], clean(k["value"]), KPI_PT, TIER_COLORS[0], semibold=True)
+        tf = textbox(s, x, lay["kpi_top"] + Inches(0.8), lay["cell_w"], Inches(0.5))
+        write(tf.paragraphs[0], clean(k["label"]), KPI_LABEL_PT, TIER_COLORS[2])
+    chart = spec.get("chart")
+    if chart:
+        bars = chart["bars"]
+        cd = CategoryChartData()
+        cd.categories = [clean(b["label"]) for b in bars]
+        cd.add_series(clean(spec["heading"]), [float(b["value"]) for b in bars])
+        x, y, cx, cy = lay["chart_box"]
+        ch = s.shapes.add_chart(XL_CHART_TYPE.COLUMN_CLUSTERED, x, y, cx, cy, cd).chart
+        ch.has_legend = False
+        ch.has_title = False
+        ch.font.name, ch.font.size = FONT, Pt(CHART_PT)
+        ch.font.color.rgb = TIER_COLORS[1]
+        plot = ch.plots[0]
+        plot.gap_width = 70
+        plot.has_data_labels = True
+        dl = plot.data_labels
+        dl.number_format = f'#,##0.##"{chart_unit(chart)}"'.replace(".##", "") if all(
+            float(b["value"]).is_integer() for b in bars) else f'#,##0.0"{chart_unit(chart)}"'
+        dl.number_format_is_linked = False
+        dl.position = XL_LABEL_POSITION.OUTSIDE_END
+        dl.font.size, dl.font.name = Pt(CHART_PT), FONT
+        dl.font.color.rgb = TIER_COLORS[0]
+        fill = plot.series[0].format.fill
+        fill.solid()
+        fill.fore_color.rgb = TIER_COLORS[2]
+        va = ch.value_axis
+        va.visible = False
+        va.has_major_gridlines = False
+        va.minimum_scale = 0
+        ca = ch.category_axis
+        ca.has_major_gridlines = False
+        ca.format.line.color.rgb = CHART_AXIS
+        ca.tick_labels.font.size, ca.tick_labels.font.name = Pt(CHART_PT), FONT
+        ca.tick_labels.font.color.rgb = TIER_COLORS[1]
 
 
 def section_slide(prs, text):
@@ -509,6 +681,8 @@ def _build(spec, out_path):
     for s in spec.get("slides", []):
         if s.get("kind") == "section":
             section_slide(prs, s["heading"])
+        elif s.get("kind") == "data":
+            data_slide(prs, s)
         else:
             content_slide(prs, s)
     closing = spec.get("closing", "THANK YOU")

@@ -140,16 +140,27 @@ PYRAMID_GUIDE = """STRUCTURE: PYRAMID (answer first). Build the deck top-down:
   slides, then at most 2 lines with the ask / next step. No other lines. (The builder checks this.)
 - MIDDLE - the pillars. 2-4 pillar slides (kind "pillar"; 3 is usually best), each a distinct,
   non-overlapping reason the answer holds (mutually exclusive, together covering the case).
-  Each pillar heading is a complete-sentence claim (the "so what", not a topic label);
-  its 6-8 lines give the strongest evidence for it.
+  Each pillar heading is a complete-sentence claim (the "so what", not a topic label).
 - BASE - the evidence. Straight after its pillar, add evidence slides (kind "evidence") that back it.
-  Evidence LEADS WITH DATA: figures, percentages, money, counts, dates, rankings and before/after
-  comparisons - aim for at least half the lines carrying a concrete figure. Take figures from the
-  source files or well-established public facts. NEVER invent or estimate statistics to fill a line;
-  where no reliable figure exists, use a specific named example (a place, project, law or date) instead.
   Every evidence heading is a complete-sentence takeaway.
+- BASE - charts & KPIs. Where the sources give real figures, back a pillar with a data slide
+  (kind "data", placed among that pillar's evidence): a complete-sentence takeaway heading plus
+  "kpis" (2-4 big numbers, each {"value": "70%", "label": "Lower power bills"}; value at most 3 words,
+  label at most 6) and/or "chart" (one simple bar chart: {"unit": "%", "bars": [{"label": "Mardan",
+  "value": 70}, ...]}, 2-8 bars, labels at most 3 words, numeric values). Aim for at least one data
+  slide in the deck when figures exist. Every number must come from the sources or well-established
+  facts - NEVER invent, estimate or round up figures to make a chart; skip data slides when no real
+  figures exist.
 - NEXT STEPS - when the ask needs detail (a pilot, plan, phases, costs, owners), add slides of
   kind "next" after the last pillar's evidence. Their headings are complete sentences.
+- EVERY pillar, evidence and next slide has exactly three tiers instead of "lines":
+    "fact":     exactly 2 sentences - the core fact or claim of the slide, stated plainly
+    "proof":    exactly 4 sentences - the reasoning that proves the fact (how and why it holds)
+    "evidence": exactly 2 sentences - hard evidence: figures, percentages, money, counts, dates,
+                named results or before/after comparisons
+  Take figures from the source files or well-established public facts. NEVER invent or estimate
+  statistics; where no reliable figure exists, use a specific named example (a place, project, law
+  or date) instead. The builder draws the tiers darkest to lightest with growing space between them.
 - APPENDIX - only genuinely supplementary material: methods, definitions, data tables, metrics
   frameworks, extra cases, sources. A divider {"kind": "section", "heading": "Appendix"} (no lines),
   then appendix slides (kind "appendix", 3-8 lines). Anything that supports a pillar belongs in that
@@ -164,11 +175,14 @@ def first_prompt(job):
     pyramid = job.get("structure") == "pyramid"
     if pyramid:
         rules = [PYRAMID_GUIDE, "",
-                 "Builder limits: every line must fit on one line of a 16:9 slide at 20 pt",
-                 "(two-column lines are half width); pillar and evidence slides have 6-8 lines."]
+                 "Builder limits: every sentence must fit on one line of a 16:9 slide at 20 pt."]
         schema = ('{"title": str, "date": str, "structure": "pyramid", "agenda": false, "slides": ['
-                  '{"kind": "summary"|"pillar"|"evidence"|"next"|"section"|"appendix", "heading": str, "lines": [str]}'
-                  ' or {"kind": ..., "heading": str, "left": [str], "right": [str]}]}')
+                  '{"kind": "summary", "heading": str, "lines": [str]}, '
+                  '{"kind": "pillar"|"evidence"|"next", "heading": str, "fact": [2 str], "proof": [4 str], "evidence": [2 str]}, '
+                  '{"kind": "data", "heading": str, "kpis": [{"value": str, "label": str}], '
+                  '"chart": {"unit": str, "bars": [{"label": str, "value": number}]}}, '
+                  '{"kind": "section", "heading": "Appendix", "lines": []}, '
+                  '{"kind": "appendix", "heading": str, "lines": [str]}]}')
     else:
         rules = ["LINES PER SLIDE: every content slide has 6 to 8 one-liners - 6 when the topic is simple,",
                  "7 or 8 when it needs more detail. Two-column slides: up to 8 per column, at least 6 in total.",
@@ -210,7 +224,10 @@ def first_prompt(job):
 
 
 SLIDE_SCHEMA = ('{"heading": str, "lines": [str]} or {"heading": str, "left": [str], "right": [str]}'
-                ' (keep each slide\'s "kind" if it has one)')
+                ' - or, for pyramid pillar/evidence/next slides, {"heading": str, "fact": [2 str], '
+                '"proof": [4 str], "evidence": [2 str]}, or for pyramid data slides {"heading": str, '
+                '"kpis": [{"value": str, "label": str}], "chart": {"unit": str, "bars": [{"label": str, '
+                '"value": number}]}} (keep each slide\'s "kind" if it has one)')
 
 
 def per_slide_errors(spec):
@@ -272,7 +289,7 @@ def write_big(jid, job, folder):
     schema_start = plan.index("Reply with ONLY JSON")
     schema_line = plan[schema_start:].split("\n")[1]
     if pyramid:
-        plan_schema = ('{"title": str, "date": str, "outline": [{"kind": "summary"|"pillar"|"evidence"|"next"|"section"|"appendix",'
+        plan_schema = ('{"title": str, "date": str, "outline": [{"kind": "summary"|"pillar"|"evidence"|"data"|"next"|"section"|"appendix",'
                        ' "heading": str}]}  ' f"- exactly {k} entries in presentation order, following the pyramid structure.")
     else:
         plan_schema = ('{"title": str, "date": str, "agenda": bool, "headings": [str]}  '
@@ -536,7 +553,7 @@ def revise(jid):
               f"\n\nKeep the slide count rule ({count_rule(job)}) unless the owner asks for a different number"
               f" (3 to {MAX_CUSTOM} slides allowed)."
               + ("\n\nThis is a PYRAMID deck: keep the answer-first structure and every slide's kind "
-                 "(summary first and listing every pillar word-for-word, 2-4 pillars each followed by its evidence, "
+                 "(summary first and listing every pillar word-for-word, 2-4 pillars each followed by its evidence and data slides, "
                  "optional next-steps slides, optional Appendix divider and appendix slides), with complete-sentence headings and lines."
                  if job.get("structure") == "pyramid" else "") +
               "\n\nCurrent deck:\n```json\n" + json.dumps(job.get("spec", {}), ensure_ascii=False) +

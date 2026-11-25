@@ -44,11 +44,21 @@ Used when the owner picks **Pyramid**, or asks for an answer-first, executive, r
 | Level | Slide `kind` | What it holds |
 |---|---|---|
 | **Top: the answer** | `summary` (first content slide, exactly one) | Heading = the core recommendation or conclusion, as one complete sentence. Lines = **every pillar heading word-for-word, in order**, then at most 2 lines with the ask or next step. Nothing else |
-| **Middle: the pillars** | `pillar` (2-4, usually 3) | Heading = one distinct, non-overlapping reason the answer holds, as a complete-sentence claim. 6-8 lines of the strongest evidence |
-| **Base: the evidence** | `evidence` (straight after the pillar it supports) | Heading = a complete-sentence takeaway. 6-8 lines that **lead with data**: figures, percentages, money, counts, dates, before/after |
-| **Next steps** | `next` (after the last pillar's evidence) | Detail on the ask: pilot, plan, phases, costs, owners |
+| **Middle: the pillars** | `pillar` (2-4, usually 3) | Heading = one distinct, non-overlapping reason the answer holds, as a complete-sentence claim. Three tiers: 2 fact, 4 proof, 2 evidence (below) |
+| **Base: the evidence** | `evidence` (straight after the pillar it supports) | Heading = a complete-sentence takeaway. Three tiers; the evidence tier **leads with data**: figures, percentages, money, counts, dates, before/after |
+| **Base: charts & KPIs** | `data` (after its pillar, among its evidence) | Heading = a complete-sentence takeaway. 2-4 big KPI numbers with short labels, and/or one grey bar chart (2-8 bars). Only with real figures |
+| **Next steps** | `next` (after the last pillar's evidence) | Detail on the ask: pilot, plan, phases, costs, owners. Three tiers |
 | **Appendix** | `section` divider (heading "Appendix", no lines), then `appendix` slides (3-8 lines) | **Supplementary material only**: methods, definitions, data tables, metrics frameworks, extra cases, sources. Leave it out when there is nothing supplementary |
 
+- **Every pillar, evidence and next slide uses three tiers** instead of `"lines"`:
+
+  | Tier | Field | Sentences | Look |
+  |---|---|---|---|
+  | The fact | `"fact"` | exactly 2 | dark grey `#2c3137`, a little thick |
+  | Proving it | `"proof"` | exactly 4 | a step lighter, `#474e56` |
+  | Evidence | `"evidence"` | exactly 2 (figures, named results) | another small step lighter, `#5f6874` |
+
+  The builder adds a small space after the fact and a bigger space after the proof. Greys come from the "Urban Smoke and Steel" and "Muted Grid" palettes, in even steps.
 - Headings and lines are **complete sentences** (subject + verb), up to 14 words, still one line, no full stops.
 - Headings state the "so what", never a topic label: "Solar cuts school power bills by 70 percent", not "Cost Savings".
 - **Data first:** aim for at least half of each evidence slide's lines to carry a concrete figure, taken from the sources or well-established facts. **Never invent or estimate statistics**; where no reliable figure exists, use a specific named example (a place, project, law or date).
@@ -60,12 +70,28 @@ Used when the owner picks **Pyramid**, or asks for an answer-first, executive, r
 KP should solarise all public schools by 2028                      (summary)
   Solar cuts school power bills by about 70 percent
   Reliable power keeps classrooms running during load shedding
-  Costs are recovered within four years from savings
+  Start with 2,000 schools in the hottest districts
 
 Solar cuts school power bills by about 70 percent                  (pillar)
-  Pilot schools in Mardan saw bills fall from 40k to 12k rupees
-  ...
+  fact:     Solar panels cut school power bills by about 70 percent
+            Schools save money exactly when they pay the highest tariffs
+  proof:    Schools use most of their power during daylight teaching hours
+            Rooftop panels produce the most power in those same hours
+            Daytime peak tariffs make every unit of solar worth more
+            Net metering sells surplus power back during school holidays
+  evidence: Mardan pilot schools cut bills from 40,000 to 12,000 rupees
+            Kohat pilot schools recovered their full system cost in 4 years
 ```
+
+Data slide example (charts & KPIs, only with real figures):
+
+```json
+{"kind": "data", "heading": "Pilot schools cut power bills in every district tested",
+ "kpis": [{"value": "70%", "label": "Lower power bills"}, {"value": "4 years", "label": "Full payback"}],
+ "chart": {"unit": "%", "bars": [{"label": "Mardan", "value": 70}, {"label": "Swat", "value": 64}]}}
+```
+
+KPI numbers are 36 pt in the darkest tier grey, labels 18 pt in the lightest; bars are the lightest tier grey with values on top. The chart is a real PowerPoint chart, so it stays editable.
 
 ## Reference examples
 
@@ -80,3 +106,4 @@ CMPO Work Ethic            (two columns)
   High Quality             | No hierarchy - Communal Workspace
   Low Cost | Low HR        | Do More with Less
 ```
+

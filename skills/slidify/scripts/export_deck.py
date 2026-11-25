@@ -46,10 +46,57 @@ def _hex(rgb):
     return "#" + str(rgb)
 
 
-def _text(d, x, y, text, pt, color):
+def _text(d, x, y, text, pt, color, stroke=0):
     f = _font(pt)
     # Align the glyph box top with y, like a PowerPoint text line.
-    d.text((x, y + _pt(pt) * 0.1), text, font=f, fill=_hex(color))
+    d.text((x, y + _pt(pt) * 0.1), text, font=f, fill=_hex(color),
+           stroke_width=stroke, stroke_fill=_hex(color) if stroke else None)
+
+
+def _semibold(img, x, y, text, pt, color):
+    """'A little thick': draw at 3x with a 1px outline, then shrink, so the outline is a third of a pixel."""
+    k = 3
+    f = ImageFont.truetype(str(bd.FONT_FILE), _pt(pt) * k, index=bd.FONT_INDEX)
+    w = int(f.getlength(text)) + 8 * k
+    h = int(_pt(pt) * 1.6) * k
+    layer = Image.new("L", (w, h), 0)
+    ImageDraw.Draw(layer).text((2 * k, _pt(pt) * 0.1 * k), text, font=f, fill=255, stroke_width=1, stroke_fill=255)
+    mask = layer.resize((w // k, h // k), Image.LANCZOS)
+    img.paste(Image.new("RGB", mask.size, _hex(color)), (int(x) - 2, int(y)), mask)
+
+
+def _data(img, d, s):
+    """Draw KPIs and the grey bar chart the same way data_slide lays them out."""
+    lay = bd.data_layout(s)
+    for n, k in enumerate(s.get("kpis") or []):
+        x = _px(bd.LEFT + n * lay["cell_w"] + bd.INSET)
+        top = _px(lay["kpi_top"])
+        vy = top + int(0.8 * PX_PER_IN) - int(_pt(bd.KPI_PT) * 1.25)
+        _semibold(img, x, vy, bd.clean(k["value"]), bd.KPI_PT, bd.TIER_COLORS[0])
+        _text(d, x, top + int(0.8 * PX_PER_IN) + _pt(3), bd.clean(k["label"]), bd.KPI_LABEL_PT, bd.TIER_COLORS[2])
+    chart = s.get("chart")
+    if not chart:
+        return
+    bars = chart["bars"]
+    x0, y0, cw, chh = (_px(v) for v in lay["chart_box"])
+    label_h, value_h = _pt(bd.CHART_PT) * 2, _pt(bd.CHART_PT) * 1.8
+    base_y = y0 + chh - label_h
+    top_y = y0 + value_h
+    slot = cw / len(bars)
+    bar_w = slot / 1.7                                    # matches PowerPoint gap width 70%
+    vmax = max(float(b["value"]) for b in bars) or 1
+    unit = bd.chart_unit(chart)
+    d.line([(x0, base_y), (x0 + cw, base_y)], fill=_hex(bd.CHART_AXIS), width=2)
+    fv, fl = _font(bd.CHART_PT), _font(bd.CHART_PT)
+    for n, b in enumerate(bars):
+        cx = x0 + slot * n + slot / 2
+        h = (base_y - top_y) * float(b["value"]) / vmax
+        d.rectangle([cx - bar_w / 2, base_y - h, cx + bar_w / 2, base_y], fill=_hex(bd.TIER_COLORS[2]))
+        val = bd.fmt_value(b["value"], unit)
+        d.text((cx - d.textlength(val, font=fv) / 2, base_y - h - _pt(bd.CHART_PT) * 1.35), val,
+               font=fv, fill=_hex(bd.TIER_COLORS[0]))
+        lab = bd.clean(b["label"])
+        d.text((cx - d.textlength(lab, font=fl) / 2, base_y + _pt(6)), lab, font=fl, fill=_hex(bd.TIER_COLORS[1]))
 
 
 def _centered(d, box_top_in, box_h_in, text, pt, color):
@@ -106,13 +153,30 @@ def render_slides(spec):
             _centered(d, 3.3, 0.9, bd.clean(s["heading"]), bd.TITLE_PT, bd.GREY_HEADING)
             slides.append(img)
             continue
+        if s.get("kind") == "data":                       # Pyramid base: KPIs and / or a bar chart
+            hpt = bd.pick_size(bd.HEADING_SIZES, [s["heading"]], bd.TEXT_W)
+            hy = int(0.45 * PX_PER_IN + (0.7 * PX_PER_IN - _pt(hpt) * 1.2) / 2)
+            _text(d, _px(bd.LEFT + bd.INSET), hy, bd.clean(s["heading"]), hpt, bd.GREY_HEADING)
+            _data(img, d, s)
+            slides.append(img)
+            continue
         hpt = bd.pick_size(bd.HEADING_SIZES, [s["heading"]], bd.TEXT_W)
         hy = int(0.45 * PX_PER_IN + (0.7 * PX_PER_IN - _pt(hpt) * 1.2) / 2)
         _text(d, _px(bd.LEFT + bd.INSET), hy, bd.clean(s["heading"]), hpt, bd.GREY_HEADING)
         _logo(img, "logo_top.png", W - int(0.95 * PX_PER_IN), 0, int(1.0 * PX_PER_IN))
         _logo(img, "logo_corner.png", W - int(1.65 * PX_PER_IN), H - int(0.85 * PX_PER_IN), int(0.55 * PX_PER_IN))
         top = int(bd.BODY_TOP)
-        if "lines" in s:
+        if bd.is_tiered(s):                               # Pyramid: fact / proof / evidence
+            pt = bd.pick_size(bd.BODY_SIZES, [t for t, _ in bd.tier_lines(s)], bd.TEXT_W)
+            rows, gaps = bd.tier_layout(s, pt)
+            x, y = _px(bd.LEFT + bd.INSET), _px(top) + _pt(2)
+            for (text, tier), gap in zip(rows, gaps):
+                if tier == 0:
+                    _semibold(img, x, y, bd.clean(text), pt, bd.TIER_COLORS[tier])
+                else:
+                    _text(d, x, y, bd.clean(text), pt, bd.TIER_COLORS[tier])
+                y += _pt(pt * 1.2 + gap)
+        elif "lines" in s:
             pt = bd.pick_size(bd.BODY_SIZES, s["lines"], bd.TEXT_W)
             _lines(d, bd.LEFT, top, s["lines"], pt)
         else:
@@ -200,9 +264,28 @@ def write_docx(spec, path):
             doc.paragraphs[-1].runs[-1].add_break(WD_BREAK.PAGE)
             continue
         para(bd.clean(s["heading"]), bd.HEADING_SIZES[0], bd.GREY_HEADING, after=24)
-        lines = s.get("lines") or (s.get("left", []) + s.get("right", []))
-        for line in lines:
-            para(bd.clean(line), bd.BODY_SIZES[0], bd.BLACK, after=16)
+        if s.get("kind") == "data":                       # KPIs and chart values as text
+            for k in s.get("kpis") or []:
+                p = para(f"{bd.clean(k['value'])}  {bd.clean(k['label'])}", bd.BODY_SIZES[0], bd.TIER_COLORS[0], after=10)
+                p.runs[0].font.bold = True
+            chart = s.get("chart")
+            if chart:
+                unit = bd.chart_unit(chart)
+                for b in chart["bars"]:
+                    para(f"{bd.clean(b['label'])}: {bd.fmt_value(b['value'], unit)}", bd.BODY_SIZES[0],
+                         bd.TIER_COLORS[2], after=6)
+        elif bd.is_tiered(s):                               # fact / proof / evidence, each lighter
+            rows, _ = bd.tier_layout(s, bd.BODY_SIZES[0])
+            for k, (text, tier) in enumerate(rows):
+                nxt = rows[k + 1][1] if k + 1 < len(rows) else tier
+                p = para(bd.clean(text), bd.BODY_SIZES[0], bd.TIER_COLORS[tier],
+                         after=8 if nxt == tier else bd.TIER_GAPS_PT[tier + 1] * 0.6)
+                if tier == 0:
+                    p.runs[0].font.bold = True   # Word has no hairline outline; bold stands in
+        else:
+            lines = s.get("lines") or (s.get("left", []) + s.get("right", []))
+            for line in lines:
+                para(bd.clean(line), bd.BODY_SIZES[0], bd.BLACK, after=16)
         doc.paragraphs[-1].runs[-1].add_break(WD_BREAK.PAGE)
 
     closing = spec.get("closing", "THANK YOU")
