@@ -55,10 +55,10 @@ Used when the owner picks **Pyramid**, or asks for an answer-first, executive, r
   | Tier | Field | Sentences | Look |
   |---|---|---|---|
   | The fact | `"fact"` | exactly 2 | dark grey `#2c3137`, a little thick |
-  | Proving it | `"proof"` | exactly 4 | a step lighter, `#50575f` |
-  | Evidence | `"evidence"` | exactly 2 (figures, named results) | another small step lighter, `#5f6874` |
+  | Proving it | `"proof"` | exactly 4 | clearly lighter, mid grey `#5c6670` |
+  | Evidence | `"evidence"` | exactly 2 (figures, named results) | clearly lighter again, light grey `#8a929c` |
 
-  Every line has the same even spacing as any other slide (no extra gaps between tiers); the tiers are told apart only by their grey. Greys come from the "Urban Smoke and Steel" and "Muted Grid" palettes, in even steps.
+  Every line has the same even spacing as any other slide (no extra gaps between tiers); the tiers are told apart only by their grey. Greys come from the "Urban Smoke and Steel" and "Muted Grid" palettes, in three clearly different, even steps.
 - Headings and lines are **complete sentences** (subject + verb), up to 14 words, still one line, no full stops.
 - Headings state the "so what", never a topic label: "Solar cuts school power bills by 70 percent", not "Cost Savings".
 - **Data first:** aim for at least half of each evidence slide's lines to carry a concrete figure, taken from the sources or well-established facts. **Never invent or estimate statistics**; where no reliable figure exists, use a specific named example (a place, project, law or date).

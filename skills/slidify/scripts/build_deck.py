@@ -80,7 +80,7 @@ PYRAMID_MAX_ASKS = 2      # summary lines that are not pillars (the ask / next s
 # ("Urban Smoke and Steel" greys): the fact (2, slightly thick), proving it (4), evidence (2).
 TIERS = (("fact", 2), ("proof", 4), ("evidence", 2))
 TIER_KINDS = ("pillar", "evidence", "next")
-TIER_COLORS = (RGBColor(0x2C, 0x31, 0x37), RGBColor(0x50, 0x57, 0x5F), RGBColor(0x5F, 0x68, 0x74))
+TIER_COLORS = (RGBColor(0x2C, 0x31, 0x37), RGBColor(0x5C, 0x66, 0x70), RGBColor(0x8A, 0x92, 0x9C))
 SEMIBOLD_PT = 0.3             # hairline outline that makes the fact lines a little thick
 
 
