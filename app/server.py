@@ -160,7 +160,7 @@ PYRAMID_GUIDE = """STRUCTURE: PYRAMID (answer first). Build the deck top-down:
                 named results or before/after comparisons
   Take figures from the source files or well-established public facts. NEVER invent or estimate
   statistics; where no reliable figure exists, use a specific named example (a place, project, law
-  or date) instead. The builder draws the tiers darkest to lightest with an equal space between them.
+  or date) instead. The builder draws the tiers darkest to lightest, all lines evenly spaced.
 - APPENDIX - only genuinely supplementary material: methods, definitions, data tables, metrics
   frameworks, extra cases, sources. A divider {"kind": "section", "heading": "Appendix"} (no lines),
   then appendix slides (kind "appendix", 3-8 lines). Anything that supports a pillar belongs in that
@@ -427,7 +427,8 @@ def make_deck(jid, prompt, session=None, limits=(1, bd.MAX_SLIDES), feedback=Non
     set_job(jid, message=f"Building PowerPoint, PDF, pictures & Word ({bd.slide_count(spec)} slides)...")
     version = job.get("version", 0) + 1
     out_dir = folder / f"v{version}"
-    stem = safe_name(bd.clean(spec["title"]))
+    mode = "Pyramid" if spec.get("structure") == "pyramid" else "Standard"
+    stem = f"{safe_name(bd.clean(spec['title']))} - {mode}"     # e.g. "Solar for KP Schools - Pyramid"
     out = ex.export_all(spec, out_dir, stem=stem)
     (out_dir / "spec.json").write_text(json.dumps(spec, indent=2, ensure_ascii=False), encoding="utf-8")
     base = f"/files/{jid}/v{version}/"

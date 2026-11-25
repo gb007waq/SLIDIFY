@@ -71,4 +71,4 @@ PNGs placed in `assets/` are added automatically: `logo_title.png` on the title 
 
 ## Where to save
 
-Save to the folder the user names. Otherwise use `~/Documents/Slidify`. Name the file after the deck title.
+Save to the folder the user names. Otherwise use `~/Documents/Slidify`. Name the file after the deck title plus the presentation mode, e.g. `Solar for KP Schools - Pyramid.pptx` or `Employment Generation in KP - Standard.pptx`.

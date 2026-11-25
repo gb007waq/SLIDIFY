@@ -276,10 +276,8 @@ def write_docx(spec, path):
                          bd.TIER_COLORS[2], after=6)
         elif bd.is_tiered(s):                               # fact / proof / evidence, each lighter
             rows, _ = bd.tier_layout(s, bd.BODY_SIZES[0])
-            for k, (text, tier) in enumerate(rows):
-                nxt = rows[k + 1][1] if k + 1 < len(rows) else tier
-                p = para(bd.clean(text), bd.BODY_SIZES[0], bd.TIER_COLORS[tier],
-                         after=8 if nxt == tier else bd.TIER_GAPS_PT[tier + 1] * 0.6)
+            for text, tier in rows:
+                p = para(bd.clean(text), bd.BODY_SIZES[0], bd.TIER_COLORS[tier], after=16)
                 if tier == 0:
                     p.runs[0].font.bold = True   # Word has no hairline outline; bold stands in
         else:
@@ -331,7 +329,8 @@ def main():
         for e in errors:
             print("  - " + e)
         sys.exit(1)
-    out = export_all(spec, args[1], stem=bd.clean(spec["title"]))
+    mode = "Pyramid" if spec.get("structure") == "pyramid" else "Standard"
+    out = export_all(spec, args[1], stem=f"{bd.clean(spec['title'])} - {mode}")
     for k, v in out.items():
         print(k, ":", f"{len(v)} files" if isinstance(v, list) else v)
 

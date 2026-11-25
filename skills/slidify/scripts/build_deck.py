@@ -81,7 +81,6 @@ PYRAMID_MAX_ASKS = 2      # summary lines that are not pillars (the ask / next s
 TIERS = (("fact", 2), ("proof", 4), ("evidence", 2))
 TIER_KINDS = ("pillar", "evidence", "next")
 TIER_COLORS = (RGBColor(0x2C, 0x31, 0x37), RGBColor(0x47, 0x4E, 0x56), RGBColor(0x5F, 0x68, 0x74))
-TIER_GAPS_PT = (12, 44, 44)   # between lines in a tier, after the fact, after the proof (equal)
 SEMIBOLD_PT = 0.3             # hairline outline that makes the fact lines a little thick
 
 
@@ -442,16 +441,11 @@ def tier_lines(spec):
 
 
 def tier_layout(spec, pt):
-    """Space after each line (pt), scaled down only if the tiers would not fit."""
+    """Space after each line (pt): one even spacing, the same as every other slide -
+    the tiers are told apart by their grey, not by extra gaps."""
     rows = tier_lines(spec)
-    gaps = []
-    for k, (_, tier) in enumerate(rows):
-        last = k == len(rows) - 1
-        nxt = None if last else rows[k + 1][1]
-        gaps.append(0 if last else (TIER_GAPS_PT[0] if nxt == tier else TIER_GAPS_PT[tier + 1]))
-    room = Emu(BODY_BOTTOM - BODY_TOP).pt - len(rows) * pt * 1.2
-    scale = min(1.0, room / max(1, sum(gaps)))
-    return rows, [g * scale for g in gaps]
+    gap = line_gap(len(rows), pt)
+    return rows, [gap] * (len(rows) - 1) + [0]
 
 
 def tiered_box(slide, spec, pt):
