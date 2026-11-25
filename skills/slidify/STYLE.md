@@ -55,7 +55,7 @@ Used when the owner picks **Pyramid**, or asks for an answer-first, executive, r
   | Tier | Field | Sentences | Look |
   |---|---|---|---|
   | The fact | `"fact"` | exactly 2 | dark grey `#2c3137`, a little thick |
-  | Proving it | `"proof"` | exactly 4 | a step lighter, `#474e56` |
+  | Proving it | `"proof"` | exactly 4 | a step lighter, `#50575f` |
   | Evidence | `"evidence"` | exactly 2 (figures, named results) | another small step lighter, `#5f6874` |
 
   Every line has the same even spacing as any other slide (no extra gaps between tiers); the tiers are told apart only by their grey. Greys come from the "Urban Smoke and Steel" and "Muted Grid" palettes, in even steps.
