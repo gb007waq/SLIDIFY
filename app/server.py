@@ -160,7 +160,7 @@ PYRAMID_GUIDE = """STRUCTURE: PYRAMID (answer first). Build the deck top-down:
                 named results or before/after comparisons
   Take figures from the source files or well-established public facts. NEVER invent or estimate
   statistics; where no reliable figure exists, use a specific named example (a place, project, law
-  or date) instead. The builder draws the tiers darkest to lightest with growing space between them.
+  or date) instead. The builder draws the tiers darkest to lightest with an equal space between them.
 - APPENDIX - only genuinely supplementary material: methods, definitions, data tables, metrics
   frameworks, extra cases, sources. A divider {"kind": "section", "heading": "Appendix"} (no lines),
   then appendix slides (kind "appendix", 3-8 lines). Anything that supports a pillar belongs in that

@@ -58,7 +58,7 @@ Used when the owner picks **Pyramid**, or asks for an answer-first, executive, r
   | Proving it | `"proof"` | exactly 4 | a step lighter, `#474e56` |
   | Evidence | `"evidence"` | exactly 2 (figures, named results) | another small step lighter, `#5f6874` |
 
-  The builder adds a small space after the fact and a bigger space after the proof. Greys come from the "Urban Smoke and Steel" and "Muted Grid" palettes, in even steps.
+  The builder leaves one equal space between the tiers (the same after the fact and after the proof) and one even spacing between the lines inside each tier. Greys come from the "Urban Smoke and Steel" and "Muted Grid" palettes, in even steps.
 - Headings and lines are **complete sentences** (subject + verb), up to 14 words, still one line, no full stops.
 - Headings state the "so what", never a topic label: "Solar cuts school power bills by 70 percent", not "Cost Savings".
 - **Data first:** aim for at least half of each evidence slide's lines to carry a concrete figure, taken from the sources or well-established facts. **Never invent or estimate statistics**; where no reliable figure exists, use a specific named example (a place, project, law or date).
