@@ -170,6 +170,18 @@ one line each, no full stops. Lead with the number ("Bills fell 70 percent in th
 No Sequence/agenda slide - the executive summary is the agenda."""
 
 
+SOURCES_RULE = """SOURCES: every content slide (not the title, THANK YOU or an Appendix divider) ends with a
+"sources" list of 1-3 sources for what that slide says, shown in small grey type at the foot of the slide.
+- Cite PRIMARY, authoritative sources: government and ministry reports, official statistics (e.g. Pakistan
+  Bureau of Statistics, NEPRA, State Bank of Pakistan), laws and gazettes, UN / World Bank / IMF / ADB reports,
+  peer-reviewed research, recognised think tanks and reputable news organisations - and the owner's uploaded
+  files by their file name when you used them.
+- NEVER cite encyclopedias: no Wikipedia, Britannica or any other encyclopedia (the builder rejects them).
+- Write each as "Publisher, document or dataset, year" - short, e.g. "NEPRA, Tariff Determination FY2025".
+- Cite only sources you are confident really exist and support the slide. NEVER invent a report, title,
+  author or year. If a slide is your own reasoning, cite the source its facts rest on."""
+
+
 def first_prompt(job):
     today = dt.date.today().strftime("%b, %Y").upper()
     pyramid = job.get("structure") == "pyramid"
@@ -191,6 +203,7 @@ def first_prompt(job):
                  "(two-column lines are half width). The agenda lists up to 16 content headings."]
         schema = ('{"title": str, "title2": str, "date": str, "agenda": bool, "slides": [{"heading": str, "lines": [str]}'
                   ' or {"heading": str, "left": [str], "right": [str]}]}')
+    schema += '  Every content slide except a "section" divider also has "sources": [1-3 str].'
     lines = [
         "You are SLIDIFY, the owner's presentation agent.",
         "Write a deck in the owner's signature style, described in this style guide:",
@@ -202,6 +215,8 @@ def first_prompt(job):
         "TITLE: the title slide shows the title in two parts - \"title\" (first part, dark grey) and",
         "\"title2\" (second part under it, lighter grey), e.g. \"Kill Tourism\" / \"Build Tourservation\".",
         "Split naturally; each part at most 7 words. Leave \"title2\" empty only if the title cannot be split.",
+        "",
+        SOURCES_RULE,
         "",
         f"SLIDE COUNT: {count_rule(job)}",
         "The title slide, the Sequence agenda (if any) and the THANK YOU slide all count"
@@ -231,7 +246,8 @@ SLIDE_SCHEMA = ('{"heading": str, "lines": [str]} or {"heading": str, "left": [s
                 ' - or, for pyramid pillar/evidence/next slides, {"heading": str, "fact": [2 str], '
                 '"proof": [4 str], "evidence": [2 str]}, or for pyramid data slides {"heading": str, '
                 '"kpis": [{"value": str, "label": str}], "chart": {"unit": str, "bars": [{"label": str, '
-                '"value": number}]}} (keep each slide\'s "kind" if it has one)')
+                '"value": number}]}}, plus "sources": [1-3 str] on every slide '
+                '(keep each slide\'s "kind" and "sources")')
 
 
 def per_slide_errors(spec):

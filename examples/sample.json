@@ -1,116 +1,159 @@
 {
   "title": "Employment Generation in KP",
+  "title2": "Skills, Growth Centres & Private Jobs",
   "date": "NOV, 2026",
   "agenda": true,
   "slides": [
     {
       "heading": "Employment Landscape",
       "lines": [
-        "Large youth bulge with most of KP under 30",
-        "Hundreds of thousands of new job seekers every year",
-        "Unemployment highest among educated youth & women",
-        "Informal sector absorbs most of the workforce",
-        "Remittances a key income source for many households",
-        "Merged districts lag on every jobs indicator"
+        "KP population above 40 M | Young & growing fast",
+        "Large youth cohort enters the labour market every year",
+        "Agriculture & services remain the main employers",
+        "Most jobs are informal | Low pay | No protection",
+        "Female labour force participation remains very low",
+        "Remittances from the Gulf sustain many households",
+        "Merged districts lag far behind on jobs & services"
+      ],
+      "sources": [
+        "Pakistan Bureau of Statistics, 7th Population & Housing Census, 2023",
+        "Pakistan Bureau of Statistics, Labour Force Survey 2020-21",
+        "UNDP, Pakistan National Human Development Report: Youth, 2017"
       ]
     },
     {
       "heading": "Key Challenges",
       "lines": [
-        "Skills mismatch between training & market demand",
-        "Weak industrial base | Low private investment",
+        "Job creation lags behind labour force growth",
+        "Weak industrial base | Few large employers",
+        "Energy costs & shortfalls hold back manufacturing",
+        "Security concerns deter private investment",
         "Limited access to finance for small firms",
-        "Poor energy supply & connectivity in remote districts",
-        "Low female labour force participation",
-        "No real-time labour market information",
-        "Security perception deters investors"
+        "Poor connectivity in southern & merged districts",
+        "Skills taught do not match what employers need"
+      ],
+      "sources": [
+        "World Bank, Pakistan Development Update, 2024",
+        "Pakistan Bureau of Statistics, Labour Force Survey 2020-21",
+        "State Bank of Pakistan, Annual Report on the State of the Economy, 2024"
       ]
     },
     {
-      "heading": "TVET Today",
+      "heading": "Skills Mismatch",
       "lines": [
-        "Many institutes with low enrolment & weak outcomes",
-        "Outdated curricula | Obsolete equipment",
-        "Training led by supply, not employer demand",
-        "Few links with industry for placements",
-        "Weak certification & quality assurance",
-        "Little tracking of graduate employment"
+        "Graduates seek government jobs | Few exist",
+        "General degrees outnumber technical qualifications",
+        "Training courses outdated | Equipment obsolete",
+        "Employers rarely shape curricula or standards",
+        "Little career guidance in schools & colleges",
+        "Weak tracking of graduates after training",
+        "Overseas employers demand certified skills"
+      ],
+      "sources": [
+        "NAVTTC, National Skills Strategy 2009-2013",
+        "ADB, Pakistan Country Diagnostic: Skills Development, 2019",
+        "Bureau of Emigration & Overseas Employment, Annual Report, 2023"
       ]
     },
     {
       "heading": "TVET Reform",
       "lines": [
-        "Demand-driven courses designed with employers",
-        "Competency-based training & assessment in all trades",
-        "Industry boards to govern every major institute",
-        "Apprenticeships & on-the-job training made mandatory",
-        "Instructor upskilling | Modern labs",
-        "Funding linked to graduate placement results",
-        "Digital & freelancing skills in every district"
+        "Make KP TEVTA demand-driven & performance-based",
+        "Adopt competency-based training & assessment",
+        "Industry boards to set courses for every trade",
+        "Upgrade labs & retrain instructors in new trades",
+        "Add digital, solar, construction & hospitality skills",
+        "Align certificates with the National Vocational Framework",
+        "Fund institutes on graduate job placement"
+      ],
+      "sources": [
+        "Government of KP, KP TEVTA Act, 2015",
+        "NAVTTC, National Vocational Qualifications Framework, 2017",
+        "ADB, Pakistan Country Diagnostic: Skills Development, 2019"
       ]
     },
     {
       "heading": "Growth Centres",
       "lines": [
-        "Special Economic Zones as anchors for job creation",
-        "Rashakai | Hattar | Nowshera industrial clusters",
-        "District growth centres built on local strengths",
-        "Tourism hubs in Swat | Chitral | Galiyat",
-        "Marble & mineral processing in Buner & Mohmand",
-        "Agro-processing clusters for fruit & dairy",
-        "Plug-and-play facilities for small enterprises"
-      ]
-    },
-    {
-      "heading": "Priority Sectors",
-      "left": [
-        "Construction",
-        "Tourism | Hospitality",
-        "Agriculture | Livestock",
-        "Minerals | Mining",
-        "IT | Freelancing"
+        "Rashakai SEZ as the anchor for CPEC industry",
+        "Activate existing economic zones before building new",
+        "District clusters around local strengths",
+        "Marble | Minerals | Fruit Processing | Tourism",
+        "Plug-and-play sheds for small manufacturers",
+        "Link each centre to a nearby training institute",
+        "Roads | Power | Gas before tenants arrive"
       ],
-      "right": [
-        "Textiles | Garments",
-        "Food Processing",
-        "Healthcare | Nursing",
-        "Renewable Energy",
-        "Overseas Employment"
+      "sources": [
+        "KP Economic Zones Development & Management Company, Economic Zones Portfolio, 2023",
+        "Board of Investment, Special Economic Zones Act, 2012",
+        "CPEC Authority, Long Term Plan for CPEC 2017-2030"
       ]
     },
     {
       "heading": "Private Sector Links",
       "lines": [
-        "Employer councils to shape skills priorities",
-        "Public-private partnerships to run TVET institutes",
+        "Industry to co-design courses & assessments",
+        "Paid apprenticeships in partner firms",
         "Wage subsidies for first-time hires",
-        "Paid internships for graduates in local firms",
-        "Single window for investor approvals",
-        "Chambers of commerce as active partners",
-        "Overseas employment linked to certified skills"
+        "Chambers to share annual demand for skills",
+        "Public-private management of selected institutes",
+        "Ease of doing business through one-window services",
+        "Link trainees to overseas employment agencies"
+      ],
+      "sources": [
+        "Government of Pakistan, Apprenticeship Act, 2018",
+        "KP Board of Investment & Trade, Investment Facilitation Framework, 2023",
+        "World Bank, Doing Business in Pakistan, 2020"
       ]
     },
     {
-      "heading": "Key Enablers",
+      "heading": "Youth & Women",
       "lines": [
-        "Easy credit for youth & women entrepreneurs",
-        "Labour market information system for KP",
-        "Reliable power | Better road links",
-        "Online business registration & licensing",
-        "Targeted support for merged districts",
-        "Skills training for women close to home"
+        "Self-employment loans for young entrepreneurs",
+        "Startup incubators in every divisional headquarters",
+        "Freelancing & IT training for online income",
+        "Home-based & digital work for women",
+        "Safe transport & childcare near training centres",
+        "Special quotas for merged district youth",
+        "Mentoring | Market Access | Follow-up Support"
+      ],
+      "sources": [
+        "Government of KP, Khyber Pakhtunkhwa Youth Policy, 2016",
+        "UNDP, Pakistan National Human Development Report: Youth, 2017",
+        "ILO, Women's Economic Empowerment in Pakistan, 2020"
+      ]
+    },
+    {
+      "heading": "Financing & Delivery",
+      "lines": [
+        "Pool skills funding into one KP jobs fund",
+        "Results-based contracts with training providers",
+        "Use World Bank & ADB support for economic zones",
+        "Credit guarantees for small & medium firms",
+        "A labour market information system for KP",
+        "Annual report on jobs created by district",
+        "Low Cost | High Impact | Measured Results"
+      ],
+      "sources": [
+        "World Bank, KP Economic Revitalization Project, Project Appraisal Document, 2020",
+        "State Bank of Pakistan, Prime Minister Youth Business & Agriculture Loan Scheme, 2023"
       ]
     },
     {
       "heading": "Way Forward",
       "lines": [
-        "Set up a KP Jobs Task Force under CM",
-        "Pilot reformed TVET in 5 districts by Jun, 27",
-        "Launch employer councils in each growth centre",
-        "Fast-track approvals in Special Economic Zones",
-        "Track jobs created on a public dashboard",
-        "Scale what works | Close what does not",
-        "Review progress every quarter"
+        "Set a provincial jobs target with clear owners",
+        "Reform TEVTA within 12 months",
+        "Fully activate Rashakai & two district clusters",
+        "Sign apprenticeship deals with leading chambers",
+        "Launch youth & women employment window",
+        "Track jobs quarterly | Publish results openly",
+        "CMPO to coordinate | Departments to deliver"
+      ],
+      "sources": [
+        "Government of KP, KP TEVTA Act, 2015",
+        "CPEC Authority, Long Term Plan for CPEC 2017-2030",
+        "Government of KP, Khyber Pakhtunkhwa Youth Policy, 2016"
       ]
     }
   ]

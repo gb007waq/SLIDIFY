@@ -65,6 +65,28 @@ def _semibold(img, x, y, text, pt, color):
     img.paste(Image.new("RGB", mask.size, _hex(color)), (int(x) - 2, int(y)), mask)
 
 
+def _footer(d, s):
+    """Sources line: 9 pt light grey at the foot of the slide, wrapping to two lines if needed."""
+    text = bd.sources_text(s)
+    if not text:
+        return
+    f = _font(bd.SOURCE_PT)
+    x, y = _px(bd.LEFT + bd.INSET), _px(bd.SOURCE_TOP) + _pt(2)
+    avail = _px(bd.TEXT_W - 2 * bd.INSET)
+    line, lines = "", []
+    for word in text.split(" "):
+        test = (line + " " + word).strip()
+        if d.textlength(test, font=f) > avail and line:
+            lines.append(line)
+            line = word
+        else:
+            line = test
+    lines.append(line)
+    for ln in lines[:2]:
+        _text(d, x, y, ln, bd.SOURCE_PT, bd.SOURCE_COLOR)
+        y += _pt(bd.SOURCE_PT * 1.2)
+
+
 def _data(img, d, s):
     """Draw KPIs and the grey bar chart the same way data_slide lays them out."""
     lay = bd.data_layout(s)
@@ -164,6 +186,7 @@ def render_slides(spec):
             hy = int(0.45 * PX_PER_IN + (0.7 * PX_PER_IN - _pt(hpt) * 1.2) / 2)
             _text(d, _px(bd.LEFT + bd.INSET), hy, bd.clean(s["heading"]), hpt, bd.GREY_HEADING)
             _data(img, d, s)
+            _footer(d, s)
             slides.append(img)
             continue
         hpt = bd.pick_size(bd.HEADING_SIZES, [s["heading"]], bd.TEXT_W)
@@ -194,6 +217,7 @@ def render_slides(spec):
             y0 = _px(top) - int(0.1 * PX_PER_IN)
             y1 = _px(top) + n * _pt(pt * 1.2 + bd.line_gap(n, pt)) - int(0.2 * PX_PER_IN)
             d.line([(x, y0), (x, y1)], fill="black", width=max(2, _pt(1.25)))
+        _footer(d, s)
         slides.append(img)
 
     closing = spec.get("closing", "THANK YOU")
@@ -293,6 +317,8 @@ def write_docx(spec, path):
             lines = s.get("lines") or (s.get("left", []) + s.get("right", []))
             for line in lines:
                 para(bd.clean(line), bd.BODY_SIZES[0], bd.BLACK, after=16)
+        if bd.sources_text(s):
+            para(bd.sources_text(s), bd.SOURCE_PT, bd.SOURCE_COLOR, before=18, after=0)
         doc.paragraphs[-1].runs[-1].add_break(WD_BREAK.PAGE)
 
     closing = spec.get("closing", "THANK YOU")

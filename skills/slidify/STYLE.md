@@ -38,6 +38,13 @@ Taken from the owner's reference deck, `reference/CMPO Gov.pdf`. Open it wheneve
 - **12 slides by default**, counting the title, Sequence and THANK YOU slides. When the owner asks for another number (fewer, 15-20, or any exact count), use that instead.
 - The Sequence slide lists up to 8 headings in one column and up to 16 in two columns. With more than 16 content slides, leave it out.
 
+## Sources (every content slide, every mode)
+
+- A **Sources:** line at the foot of every content slide, 9 pt in light grey `#8a929c`, at most two lines. Spec: `"sources": ["NEPRA, Tariff Determination FY2025", ...]` (1-3 per slide).
+- Cite **primary, authoritative** sources: government and ministry reports, official statistics, laws, UN / World Bank / IMF / ADB reports, peer-reviewed research, recognised think tanks, reputable news, and the owner's uploaded files by name.
+- **Never encyclopedias**: no Wikipedia, Britannica or any other encyclopedia. The builder rejects them.
+- Only real sources that support the slide - never invent a report, title, author or year.
+
 ## Pyramid mode (answer first)
 
 Used when the owner picks **Pyramid**, or asks for an answer-first, executive, recommendation or "pyramid" presentation. Same look as above; only the structure and wording change. Set `"structure": "pyramid"` and give every slide a `"kind"`:

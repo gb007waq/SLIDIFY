@@ -20,6 +20,7 @@ If you can read PDFs, look at `reference/CMPO Gov.pdf` too: match its tone, line
 - **No bullet markers.** Each point is a plain one-liner with space around it.
 - One line per point, 12 words at most (aim for 4-8). Never two lines.
 - Pair related items with ` | `, and use `&` for "and". No full stops.
+- **Sources on every content slide:** `"sources": [...]` (1-3) printed at 9 pt at the foot. Primary, real sources only (government, official statistics, laws, research, the owner's files); never Wikipedia, Britannica or any encyclopedia, never invented. See STYLE.md.
 - **6-8 lines on every content slide**: 6 when the topic is simple, 7-8 when it needs more detail. Use two columns for lists of short items (up to 8 per column).
 - First slide is the title (with date), then optionally a "Sequence" agenda. Last slide is THANK YOU.
 - 12 slides by default (title, Sequence and THANK YOU included). If the user asks for fewer, 15-20, or an exact number, follow that and pass it to the builder with `--slides`.

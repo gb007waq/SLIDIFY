@@ -89,6 +89,13 @@ SEMIBOLD_PT = 0.3             # hairline outline that makes the fact lines a lit
 
 
 # Pyramid data slides (the base): big KPI numbers and / or one grey bar chart.
+# Sources line at the foot of every content slide: small, light grey, no encyclopedias.
+SOURCE_PT = 9
+SOURCE_COLOR = RGBColor(0x8A, 0x92, 0x9C)
+SOURCE_COUNT = (1, 3)
+SOURCE_TOP = Inches(6.92)
+BANNED_SOURCES = re.compile(r"wiki|britannica|encyclop|encarta|world ?book|fandom|investopedia", re.I)
+
 KPI_COUNT = (2, 4)
 KPI_PT, KPI_LABEL_PT, CHART_PT = 36, 18, 18
 CHART_BARS = (2, 8)
@@ -260,6 +267,29 @@ def _check_line(errors, label, text, limit, pt, width):
         errors.append(f"{label}: too long for one line: {t!r}")
 
 
+def sources_text(s):
+    srcs = [clean(x) for x in (s.get("sources") or []) if str(x).strip()]
+    return ("Sources: " + "; ".join(srcs)) if srcs else ""
+
+
+def source_errors(s, i):
+    """Every content slide cites 1-3 real, non-encyclopedic sources that fit in two small lines."""
+    srcs = s.get("sources")
+    if not isinstance(srcs, list) or not SOURCE_COUNT[0] <= len([x for x in srcs if str(x).strip()]) <= SOURCE_COUNT[1]:
+        return [f"Slide {i}: add 'sources' - {SOURCE_COUNT[0]}-{SOURCE_COUNT[1]} real sources "
+                "(publisher, document, year), no encyclopedias."]
+    errors = []
+    for src in srcs:
+        if BANNED_SOURCES.search(str(src)):
+            errors.append(f"Slide {i}: source {clean(src)!r} is an encyclopedia; cite the primary source instead "
+                          "(government report, official statistics, law, research paper or the owner's file).")
+    width = MEASURE(sources_text(s), SOURCE_PT)
+    avail = Emu(TEXT_W - 2 * INSET).pt * 0.95 * 2
+    if width is not None and width > avail:
+        errors.append(f"Slide {i}: sources are too long for two small lines; shorten them.")
+    return errors
+
+
 def slide_errors(s, i, structure="standard", heading_width=None):
     """Rules for one content slide (number i in the deck)."""
     errors = []
@@ -269,6 +299,7 @@ def slide_errors(s, i, structure="standard", heading_width=None):
     if pyramid and kind == "section":                      # e.g. "Appendix" divider
         _check_line(errors, f"Slide {i} heading", s.get("heading", ""), 4, TITLE_PT, SLIDE_W - 2 * LEFT)
         return errors
+    errors += source_errors(s, i)
     _check_line(errors, f"Slide {i} heading", s.get("heading", ""),
                 PYRAMID_HEADING_WORDS if pyramid else MAX_HEADING_WORDS, HEADING_PT, heading_width)
     if pyramid and kind == "data":                           # KPIs and / or a grey bar chart
@@ -493,7 +524,7 @@ def heading(slide, text):
 
 
 BODY_TOP = Inches(1.65)
-BODY_BOTTOM = SLIDE_H - Inches(0.65)
+BODY_BOTTOM = SLIDE_H - Inches(0.9)      # leaves clear room for the sources line
 
 
 def line_gap(n, pt):
@@ -564,6 +595,13 @@ def title_slide(prs, spec):
         write(tf.paragraphs[0], clean(date).upper(), BODY_PT, GREY_HEADING, PP_ALIGN.CENTER)
 
 
+def sources_footer(slide, spec):
+    text = sources_text(spec)
+    if text:
+        tf = textbox(slide, LEFT, SOURCE_TOP, TEXT_W, Inches(0.45))
+        write(tf.paragraphs[0], text, SOURCE_PT, SOURCE_COLOR)
+
+
 def content_slide(prs, spec):
     s = blank(prs)
     heading(s, spec["heading"])
@@ -585,6 +623,7 @@ def content_slide(prs, spec):
                                    DIVIDER_X, bottom - Inches(0.2))
         d.line.color.rgb = BLACK
         d.line.width = Pt(1.25)
+    sources_footer(s, spec)
 
 
 def closing_slide(prs, text):
@@ -693,6 +732,7 @@ def data_slide(prs, spec):
         ca.format.line.color.rgb = CHART_AXIS
         ca.tick_labels.font.size, ca.tick_labels.font.name = Pt(CHART_PT), FONT
         ca.tick_labels.font.color.rgb = TIER_COLORS[1]
+    sources_footer(s, spec)
 
 
 def section_slide(prs, text):
