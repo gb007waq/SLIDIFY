@@ -149,6 +149,23 @@
   .struct-card small { display: block; font-size: 11.5px; line-height: 1.35; color: var(--grey-3); margin-top: 2px; }
   .check.off { opacity: .45; cursor: default; }
 
+  /* logo picker */
+  .opt { color: var(--grey-4); font-size: 12px; margin-left: 4px; }
+  .logos { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .logo-card { position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 0;
+               border: 1px solid var(--line); background: var(--card); border-radius: 12px; padding: 10px 6px 8px;
+               cursor: pointer; text-align: center; transition: border-color .2s, box-shadow .2s, transform .2s var(--ease); }
+  .logo-card:hover { transform: translateY(-2px); box-shadow: 0 10px 22px -14px rgba(0,0,0,.45); }
+  .logo-card.on { border-color: var(--grey-1); box-shadow: inset 0 0 0 1px var(--grey-1); }
+  .logo-card .pic { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 8px; background: #fff;
+                    border: 1px dashed var(--line-2); color: var(--grey-4); font-size: 20px; }
+  .logo-card .pic img { max-width: 36px; max-height: 36px; object-fit: contain; }
+  .logo-card.ready .pic { border-style: solid; border-color: var(--line); }
+  .logo-card b { font-weight: 400; font-size: 11.5px; line-height: 1.25; color: var(--grey-2); }
+  .logo-card .act { font-size: 11px; color: var(--grey-4); text-decoration: underline; background: none; border: 0; padding: 0; cursor: pointer; }
+  .logo-card .act:hover { color: var(--ink); }
+  @media (max-width: 420px) { .logos { grid-template-columns: repeat(2, 1fr); } }
+
   /* font style cards */
   .styles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
   .style-card { position: relative; text-align: left; border: 1px solid var(--line); background: #fff; border-radius: 12px;
@@ -445,6 +462,11 @@
       <label class="title" id="stylesLabel">Font style</label>
       <div class="styles" id="styles" role="radiogroup" aria-labelledby="stylesLabel"></div>
 
+      <label class="title" id="logosLabel">Logo <span class="opt">1 cm, above the title and bottom-right of every slide</span></label>
+      <div class="logos" id="logos" role="radiogroup" aria-labelledby="logosLabel"></div>
+      <input type="file" id="logoFile" accept=".png,.jpg,.jpeg,.webp" hidden>
+      <div class="error" id="logoNote"></div>
+
       <label class="check" id="agendaRow"><input type="checkbox" id="agenda" checked> <span id="agendaText">Add a Sequence (agenda) slide</span></label>
     </section>
 
@@ -554,6 +576,62 @@ function syncCount() {
 }
 ["slidesMode", "fewerN", "customN", "agenda"].forEach(id => $(id).addEventListener("input", syncCount));
 syncCount();
+
+// Logo: None, Federal Government, KP Government, Archaeology (uploaded once, reused)
+let chosenLogo = "";
+const SHORT = { fed: "Federal Govt of Pakistan", kp: "Govt of KP", archaeology: "Archaeology Dept" };
+let uploadFor = null;
+function pickLogo(id) {
+  chosenLogo = id;
+  document.querySelectorAll(".logo-card").forEach(c => {
+    const on = c.dataset.id === id;
+    c.classList.toggle("on", on); c.setAttribute("aria-checked", on);
+  });
+  try { localStorage.setItem("slidify-logo", id); } catch (_) {}
+}
+function loadLogos() {
+  fetch("/api/logos").then(r => r.json()).then(({ logos }) => {
+    const box = $("logos"); box.innerHTML = "";
+    const mk = (id, label, ready, url) => {
+      const c = document.createElement("div");
+      c.className = "logo-card" + (ready ? " ready" : ""); c.dataset.id = id;
+      c.setAttribute("role", "radio"); c.tabIndex = 0;
+      const pic = document.createElement("span"); pic.className = "pic";
+      if (url) { const im = document.createElement("img"); im.src = url; im.alt = ""; pic.appendChild(im); }
+      else pic.textContent = id ? "+" : "\u2013";
+      const b = document.createElement("b"); b.textContent = label;
+      c.append(pic, b);
+      if (id) {
+        const a = document.createElement("button"); a.type = "button"; a.className = "act";
+        a.textContent = ready ? "Change" : "Upload logo";
+        a.onclick = (e) => { e.stopPropagation(); uploadFor = id; $("logoFile").click(); };
+        c.appendChild(a);
+      }
+      const choose = () => { if (id && !ready) { uploadFor = id; $("logoFile").click(); } else pickLogo(id); };
+      c.onclick = choose;
+      c.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); choose(); } };
+      box.appendChild(c);
+    };
+    mk("", "No logo", true, null);
+    logos.forEach(l => mk(l.id, SHORT[l.id] || l.label, l.ready, l.url));
+    let saved = "";
+    try { saved = localStorage.getItem("slidify-logo") || ""; } catch (_) {}
+    pickLogo(logos.some(l => l.id === saved && l.ready) ? saved : (logos.some(l => l.id === chosenLogo && l.ready) ? chosenLogo : ""));
+  }).catch(() => { $("logos").textContent = "Logos unavailable."; });
+}
+$("logoFile").onchange = async (e) => {
+  const f = e.target.files[0]; e.target.value = "";
+  if (!f || !uploadFor) return;
+  $("logoNote").textContent = "";
+  const fd = new FormData(); fd.append("file", f);
+  const r = await fetch(`/api/logos/${uploadFor}`, { method: "POST", body: fd });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) { $("logoNote").textContent = d.error || "Upload failed."; return; }
+  chosenLogo = uploadFor;
+  try { localStorage.setItem("slidify-logo", uploadFor); } catch (_) {}
+  loadLogos();
+};
+loadLogos();
 
 // Presentation mode: Standard or Pyramid (answer first)
 let structure = "standard";
@@ -878,6 +956,7 @@ $("form").onsubmit = async (e) => {
   if (chosenStyle) fd.append("style", chosenStyle);
   fd.append("agenda", $("agenda").checked && structure !== "pyramid" ? "true" : "false");
   fd.append("structure", structure);
+  fd.append("logo", chosenLogo || "");
   picked.forEach(f => fd.append("files", f));
   if (!$("brief").value.trim() && !picked.length) { $("error").textContent = "Write a topic or add a file."; return; }
   busy(true, "Uploading...");

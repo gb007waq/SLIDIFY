@@ -129,6 +129,16 @@ def _centered(d, box_top_in, box_h_in, text, pt, color):
     _text(d, (W - tw) / 2, y, text, pt, color)
 
 
+def _chosen_logo(img, spec, left, top):
+    """The presentation's logo, fitted in a 1 cm square at (left, top) EMU."""
+    path = bd.logo_path(spec)
+    if not path:
+        return
+    x, y, w, h = bd.logo_box(path, left, top)
+    logo = Image.open(path).convert("RGBA").resize((max(1, _px(w)), max(1, _px(h))), Image.LANCZOS)
+    img.paste(logo, (_px(x), _px(y)), logo)
+
+
 def _logo(img, name, x, y, h):
     path = bd.ASSETS / name
     if not path.exists():
@@ -158,7 +168,7 @@ def render_slides(spec):
     # Title
     img = Image.new("RGB", (W, H), "white")
     d = ImageDraw.Draw(img)
-    _logo(img, "logo_title.png", None, int(2.2 * PX_PER_IN), int(1.6 * PX_PER_IN))
+    _chosen_logo(img, spec, (bd.SLIDE_W - bd.LOGO_SIZE) // 2, bd.title_logo_top(spec))
     parts, tpt, (_, ty, _, th) = bd.title_layout(spec)        # dark line, lighter line, tight
     line_h = _pt(tpt * 1.08)
     y = _px(ty) + (_px(th) - line_h * len(parts)) / 2
@@ -187,13 +197,12 @@ def render_slides(spec):
             _text(d, _px(bd.LEFT + bd.INSET), hy, bd.clean(s["heading"]), hpt, bd.GREY_HEADING)
             _data(img, d, s)
             _footer(d, s)
+            _chosen_logo(img, spec, *bd.corner_logo_pos())
             slides.append(img)
             continue
         hpt = bd.pick_size(bd.HEADING_SIZES, [s["heading"]], bd.TEXT_W)
         hy = int(0.45 * PX_PER_IN + (0.7 * PX_PER_IN - _pt(hpt) * 1.2) / 2)
         _text(d, _px(bd.LEFT + bd.INSET), hy, bd.clean(s["heading"]), hpt, bd.GREY_HEADING)
-        _logo(img, "logo_top.png", W - int(0.95 * PX_PER_IN), 0, int(1.0 * PX_PER_IN))
-        _logo(img, "logo_corner.png", W - int(1.65 * PX_PER_IN), H - int(0.85 * PX_PER_IN), int(0.55 * PX_PER_IN))
         top = int(bd.BODY_TOP)
         if bd.is_tiered(s):                               # Pyramid: fact / proof / evidence
             pt = bd.pick_size(bd.BODY_SIZES, [t for t, _ in bd.tier_lines(s)], bd.TEXT_W)
@@ -218,6 +227,7 @@ def render_slides(spec):
             y1 = _px(top) + n * _pt(pt * 1.2 + bd.line_gap(n, pt)) - int(0.2 * PX_PER_IN)
             d.line([(x, y0), (x, y1)], fill="black", width=max(2, _pt(1.25)))
         _footer(d, s)
+        _chosen_logo(img, spec, *bd.corner_logo_pos())
         slides.append(img)
 
     closing = spec.get("closing", "THANK YOU")

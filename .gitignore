@@ -2,3 +2,4 @@ app/jobs/
 .claude/settings.local.json
 __pycache__/
 *.pyc
+skills/slidify/assets/logos/

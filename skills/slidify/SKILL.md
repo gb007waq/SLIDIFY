@@ -69,7 +69,7 @@ If you can read PDFs, look at `reference/CMPO Gov.pdf` too: match its tone, line
 
 ## Logos
 
-PNGs placed in `assets/` are added automatically: `logo_title.png` on the title slide, and `logo_top.png` and `logo_corner.png` at the top right and bottom right of content slides. Add them only when the owner asks for logos on the deck.
+If the user names a logo (Federal Government, KP Government or Archaeology Department), add `"logo": "fed"`, `"kp"` or `"archaeology"` to the spec. It is placed at 1 cm x 1 cm above the title and bottom-right of every content slide, using the image in `assets/logos/`. If that image is missing, tell the user to upload it once in the SLIDIFY app.
 
 ## Where to save
 

@@ -12,7 +12,7 @@ Taken from the owner's reference deck, `reference/CMPO Gov.pdf`. Open it wheneve
   The builder uses 24 and 20, and drops to 22 or 18 only when a line would not otherwise fit on one line. Body lines on a slide always share one size.
 - **Heading:** top left, grey, short.
 - **Body:** plain lines aligned left, with **no bullet markers**, generous space between lines.
-- **Logos (optional):** small, top right and bottom right of content slides.
+- **Logo (optional):** one logo per presentation - Federal Government of Pakistan, Government of KP or Department of Archaeology - at **1 cm x 1 cm**: centred above the title on the title slide, and bottom-right of every content slide in the bottom band (the lowest 1/10 of the slide), level with the sources. Spec: `"logo": "fed" | "kp" | "archaeology"`; the image lives in `assets/logos/<id>.png` (uploaded once in the app).
 
 ## Slide types
 

@@ -360,7 +360,7 @@ def write_big(jid, job, folder):
             slides.append(s)
 
     spec = {"title": outline.get("title") or "Presentation", "title2": outline.get("title2") or "", "date": outline.get("date") or job["date"],
-            "agenda": bool(job["agenda"]), "slides": slides, "style": job.get("style"),
+            "agenda": bool(job["agenda"]), "slides": slides, "style": job.get("style"), "logo": job.get("logo"),
             "structure": job.get("structure", "standard")}
     return spec, session
 
@@ -426,6 +426,7 @@ def make_deck(jid, prompt, session=None, limits=(1, bd.MAX_SLIDES), feedback=Non
         for attempt in range(1, MAX_TRIES + 1):
             spec.pop("closing", None)
             spec["style"] = job.get("style")
+            spec["logo"] = job.get("logo")
             spec["structure"] = job.get("structure", "standard")
             if spec["structure"] == "pyramid":
                 spec["agenda"] = False
@@ -443,6 +444,7 @@ def make_deck(jid, prompt, session=None, limits=(1, bd.MAX_SLIDES), feedback=Non
 
     spec.pop("closing", None)
     spec["style"] = job.get("style")
+    spec["logo"] = job.get("logo")
     spec["structure"] = job.get("structure", "standard")
     set_job(jid, message=f"Building PowerPoint, PDF, pictures & Word ({bd.slide_count(spec)} slides)...")
     version = job.get("version", 0) + 1
@@ -507,13 +509,16 @@ def create_job():
     if style not in styles or not bd.style_ready(styles[style]):
         style = default_style
     structure = "pyramid" if request.form.get("structure") == "pyramid" else "standard"
+    logo = request.form.get("logo") or None
+    if logo not in bd.LOGOS or not (bd.LOGO_DIR / f"{logo}.png").exists():
+        logo = None
     agenda = request.form.get("agenda") == "true" and structure == "standard"  # pyramid: summary is the agenda
     if agenda and limits[0] - 3 > bd.MAX_AGENDA:
         agenda = False  # too many slides to list on one agenda slide
     job = {"id": jid, "status": "queued", "message": "Starting...", "brief": brief,
            "sources": sources, "date": (request.form.get("date") or "").strip(),
            "agenda": agenda, "limits": limits, "spoken": request.form.get("spoken") == "true",
-           "style": style, "structure": structure}
+           "style": style, "structure": structure, "logo": logo}
     with lock:
         jobs[jid] = job
     threading.Thread(target=worker, args=(jid, first_prompt(job), None, limits), daemon=True).start()
@@ -529,6 +534,57 @@ def styles_list():
          "stand_in": bd.style_ready(v) and bd.style_file(v)[1],
          "title_pt": v.get("title_pt"), "title_slide_pt": list(v.get("title_slide_pt", bd.TITLE_SLIDE_SIZES)), "heading_pt": v.get("heading_pt"), "body_pt": v.get("body_pt")}
         for k, v in styles.items()])
+
+
+@app.get("/api/logos")
+def logos_list():
+    """Logo slots for the picker: Federal Government, KP Government, Archaeology."""
+    out = []
+    for lid, label in bd.LOGOS.items():
+        f = bd.LOGO_DIR / f"{lid}.png"
+        out.append({"id": lid, "label": label, "ready": f.exists(),
+                    "url": f"/api/logos/{lid}.png?v={int(f.stat().st_mtime)}" if f.exists() else None})
+    return jsonify(logos=out)
+
+
+@app.get("/api/logos/<lid>.png")
+def logo_file(lid):
+    f = bd.LOGO_DIR / f"{lid}.png"
+    if lid not in bd.LOGOS or not f.exists():
+        abort(404)
+    return send_file(f, mimetype="image/png")
+
+
+@app.post("/api/logos/<lid>")
+def logo_upload(lid):
+    """Save an uploaded logo (PNG, JPG or WEBP) as assets/logos/<id>.png, trimmed of empty edges."""
+    if lid not in bd.LOGOS:
+        abort(404)
+    up = request.files.get("file")
+    if not up or not up.filename:
+        return jsonify(error="Choose an image file."), 400
+    from PIL import Image
+    try:
+        im = Image.open(up.stream)
+        im.load()
+    except Exception:  # noqa: BLE001
+        return jsonify(error="That file isn't an image SLIDIFY can read. Use PNG, JPG or WEBP."), 400
+    im = im.convert("RGBA")
+    box = im.getbbox()
+    if box:
+        im = im.crop(box)
+    im.thumbnail((1200, 1200))
+    bd.LOGO_DIR.mkdir(parents=True, exist_ok=True)
+    im.save(bd.LOGO_DIR / f"{lid}.png")
+    return jsonify(ok=True)
+
+
+@app.delete("/api/logos/<lid>")
+def logo_delete(lid):
+    f = bd.LOGO_DIR / f"{lid}.png"
+    if lid in bd.LOGOS and f.exists():
+        f.unlink()
+    return jsonify(ok=True)
 
 
 @app.post("/api/translate")

@@ -30,10 +30,8 @@ Spec format:
   "closing": "THANK YOU"                     # optional; default THANK YOU, "" to omit
 }
 
-Optional logos: put PNG files in the skill's assets/ folder:
-    logo_title.png   centred on the title slide
-    logo_top.png     top-right of every content slide
-    logo_corner.png  bottom-right of every content slide
+Logo: "logo": "fed" | "kp" | "archaeology" uses assets/logos/<id>.png at 1 cm x 1 cm,
+centred above the title and bottom-right (beside the sources) on every content slide.
 """
 
 import json
@@ -50,7 +48,7 @@ from pptx.enum.chart import XL_CHART_TYPE, XL_LABEL_POSITION
 from pptx.enum.shapes import MSO_CONNECTOR
 from pptx.enum.text import MSO_ANCHOR, MSO_AUTO_SIZE, PP_ALIGN
 from pptx.oxml.ns import qn
-from pptx.util import Emu, Inches, Pt
+from pptx.util import Cm, Emu, Inches, Pt
 
 # ---- Signature style -------------------------------------------------------
 FONT = "Nirmala Text"
@@ -94,6 +92,12 @@ SOURCE_PT = 9
 SOURCE_COLOR = RGBColor(0x8A, 0x92, 0x9C)
 SOURCE_COUNT = (1, 3)
 SOURCE_TOP = Inches(6.92)
+# Logos: 1 cm x 1 cm - centred above the title, and bottom-right in the bottom band
+# (the lowest 1/10 of the slide) of every content slide, level with the sources.
+LOGOS = {"fed": "Federal Government of Pakistan", "kp": "Government of Khyber Pakhtunkhwa",
+         "archaeology": "Department of Archaeology & Museums"}
+LOGO_SIZE = Cm(1)
+BAND_TOP = Inches(7.5) - Inches(0.75)          # bottom band = 1/10 of the slide height
 BANNED_SOURCES = re.compile(r"wiki|britannica|encyclop|encarta|world ?book|fandom|investopedia", re.I)
 
 KPI_COUNT = (2, 4)
@@ -121,6 +125,7 @@ LINE_GAP_PT = 32                         # space between one-liners
 
 SKILL_DIR = Path(__file__).resolve().parent.parent
 ASSETS = SKILL_DIR / "assets"
+LOGO_DIR = ASSETS / "logos"
 
 FONT_FILE = Path(r"C:\Windows\Fonts\Nirmala.ttc")
 FONT_INDEX = 3  # "Nirmala Text Regular" inside Nirmala.ttc
@@ -572,16 +577,49 @@ def title_layout(spec):
               TITLE_SLIDE_SIZES[-1])
     line_h = Pt(pt * 1.08)
     box_h = int(line_h * len(parts)) + Inches(0.1)
-    middle = Inches(4.55) if (ASSETS / "logo_title.png").exists() else Inches(3.75)
+    middle = Inches(3.75)
     return parts, pt, (LEFT, middle - box_h // 2, width, box_h)
+
+
+def logo_path(spec):
+    """The chosen logo's image file (assets/logos/<id>.png), or None."""
+    lid = spec.get("logo")
+    if lid in LOGOS:
+        f = LOGO_DIR / f"{lid}.png"
+        if f.exists():
+            return f
+    return None
+
+
+def logo_box(path, left, top):
+    """Fit the logo inside a 1 cm square anchored at (left, top): (x, y, w, h) in EMU."""
+    from PIL import Image
+    with Image.open(path) as im:
+        w, h = im.size
+    scale = LOGO_SIZE / max(w, h)
+    lw, lh = int(w * scale), int(h * scale)
+    return left + (LOGO_SIZE - lw) // 2, top + (LOGO_SIZE - lh) // 2, lw, lh
+
+
+def title_logo_top(spec):
+    _, _, (_, y, _, _) = title_layout(spec)
+    return y - Inches(0.3) - LOGO_SIZE
+
+
+def corner_logo_pos():
+    return SLIDE_W - LEFT - LOGO_SIZE, BAND_TOP + (SLIDE_H - BAND_TOP - LOGO_SIZE) // 2
+
+
+def place_logo(slide, spec, left, top):
+    path = logo_path(spec)
+    if path:
+        x, y, w, h = logo_box(path, left, top)
+        slide.shapes.add_picture(str(path), x, y, w, h)
 
 
 def title_slide(prs, spec):
     s = blank(prs)
-    logo = ASSETS / "logo_title.png"
-    if logo.exists():
-        pic = s.shapes.add_picture(str(logo), 0, Inches(2.2), height=Inches(1.6))
-        pic.left = int((SLIDE_W - pic.width) / 2)
+    place_logo(s, spec, (SLIDE_W - LOGO_SIZE) // 2, title_logo_top(spec))
     parts, pt, (x, y, w, h) = title_layout(spec)
     tf = textbox(s, x, y, w, h, MSO_ANCHOR.MIDDLE)
     for n, part in enumerate(parts):
@@ -624,6 +662,7 @@ def content_slide(prs, spec):
         d.line.color.rgb = BLACK
         d.line.width = Pt(1.25)
     sources_footer(s, spec)
+    place_logo(s, spec, *corner_logo_pos())
 
 
 def closing_slide(prs, text):
@@ -733,6 +772,7 @@ def data_slide(prs, spec):
         ca.tick_labels.font.size, ca.tick_labels.font.name = Pt(CHART_PT), FONT
         ca.tick_labels.font.color.rgb = TIER_COLORS[1]
     sources_footer(s, spec)
+    place_logo(s, spec, *corner_logo_pos())
 
 
 def section_slide(prs, text):
@@ -751,15 +791,16 @@ def _build(spec, out_path):
     prs = Presentation()
     prs.slide_width, prs.slide_height = SLIDE_W, SLIDE_H
     title_slide(prs, spec)
+    logo = spec.get("logo")                     # the presentation's logo goes on every content slide
     if spec.get("agenda"):
-        content_slide(prs, agenda_slide(spec))
+        content_slide(prs, dict(agenda_slide(spec), logo=logo))
     for s in spec.get("slides", []):
         if s.get("kind") == "section":
             section_slide(prs, s["heading"])
         elif s.get("kind") == "data":
-            data_slide(prs, s)
+            data_slide(prs, dict(s, logo=logo))
         else:
-            content_slide(prs, s)
+            content_slide(prs, dict(s, logo=logo))
     closing = spec.get("closing", "THANK YOU")
     if closing:
         closing_slide(prs, closing)
