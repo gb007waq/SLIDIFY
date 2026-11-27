@@ -600,13 +600,13 @@ fetch("/api/styles").then(r => r.json()).then(({ default: def, styles }) => {
     if (s.ready) {
       b.querySelector(".aa").style.fontFamily = `"${s.font}", var(--font)`;
       b.querySelector("small").textContent = s.font;
-      b.querySelector(".sizes").textContent = `${s.title_pt} · ${s.heading_pt.slice().reverse().join("-")} · ${s.body_pt.slice().reverse().join("-")} pt`;
+      b.querySelector(".sizes").textContent = `${s.title_slide_pt.slice().reverse().join("-")} · ${s.heading_pt.slice().reverse().join("-")} · ${s.body_pt.slice().reverse().join("-")} pt`;
       if (s.stand_in) {
         const n = document.createElement("small");
         n.textContent = "Preview uses a stand-in font";
         b.appendChild(n);
       }
-      b.title = `${s.font}: title ${s.title_pt} pt, headings ${s.heading_pt.slice().reverse().join("-")} pt, body ${s.body_pt.slice().reverse().join("-")} pt`;
+      b.title = `${s.font}: title ${s.title_slide_pt.slice().reverse().join("-")} pt, headings ${s.heading_pt.slice().reverse().join("-")} pt, body ${s.body_pt.slice().reverse().join("-")} pt`;
     } else {
       b.querySelector("small").textContent = "Font coming soon";
     }

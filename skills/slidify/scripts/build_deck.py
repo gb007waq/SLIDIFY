@@ -54,7 +54,8 @@ from pptx.util import Emu, Inches, Pt
 
 # ---- Signature style -------------------------------------------------------
 FONT = "Nirmala Text"
-TITLE_PT = 36               # title slide and THANK YOU
+TITLE_PT = 36               # THANK YOU and Appendix divider
+TITLE_SLIDE_SIZES = (44, 40)  # title slide: 44, or 40 if a line would not fit
 HEADING_SIZES = (24, 22)    # slide headings: 24, or 22 if 24 won't fit on one line
 BODY_SIZES = (20, 18)       # body lines: 20, or 18 for the whole slide if needed
 HEADING_PT = HEADING_SIZES[-1]
@@ -62,7 +63,10 @@ BODY_PT = BODY_SIZES[-1]
 
 WHITE = RGBColor(0xFF, 0xFF, 0xFF)       # background
 GREY_HEADING = RGBColor(0xA6, 0xA6, 0xA6)  # slide headings, date
-GREY_CLOSING = RGBColor(0x80, 0x80, 0x80)  # title and THANK YOU
+GREY_CLOSING = RGBColor(0x80, 0x80, 0x80)  # THANK YOU
+# Title slide: first part dark grey, second part (under it) lighter grey.
+TITLE_COLORS = (RGBColor(0x2C, 0x31, 0x37), RGBColor(0x8A, 0x92, 0x9C))
+TITLE_SEPARATORS = (": ", " | ", " - ", " – ", " — ", ", ")
 BLACK = RGBColor(0x00, 0x00, 0x00)       # body lines, column divider
 
 MAX_SLIDES = 12
@@ -151,7 +155,7 @@ def style_file(st):
 @contextmanager
 def use_style(name=None):
     """Apply a font style (font, file and sizes) while building or checking a deck."""
-    global FONT, FONT_FILE, FONT_INDEX, TITLE_PT, HEADING_SIZES, BODY_SIZES, HEADING_PT, BODY_PT
+    global FONT, FONT_FILE, FONT_INDEX, TITLE_PT, HEADING_SIZES, BODY_SIZES, HEADING_PT, BODY_PT, TITLE_SLIDE_SIZES
     default, styles = load_styles()
     name = name or default
     if name not in styles:
@@ -160,18 +164,19 @@ def use_style(name=None):
     if not style_ready(st):
         raise ValueError(f"{st.get('label', name)} has no font yet.")
     with _style_lock:
-        saved = (FONT, FONT_FILE, FONT_INDEX, TITLE_PT, HEADING_SIZES, BODY_SIZES)
+        saved = (FONT, FONT_FILE, FONT_INDEX, TITLE_PT, HEADING_SIZES, BODY_SIZES, TITLE_SLIDE_SIZES)
         f, fallback = style_file(st)
         FONT, FONT_FILE = st["font"], f
         FONT_INDEX = 0 if fallback else int(st.get("index", 0))
         TITLE_PT = st.get("title_pt", TITLE_PT)
+        TITLE_SLIDE_SIZES = tuple(st.get("title_slide_pt", TITLE_SLIDE_SIZES))
         HEADING_SIZES = tuple(st.get("heading_pt", HEADING_SIZES))
         BODY_SIZES = tuple(st.get("body_pt", BODY_SIZES))
         HEADING_PT, BODY_PT = HEADING_SIZES[-1], BODY_SIZES[-1]
         try:
             yield st
         finally:
-            FONT, FONT_FILE, FONT_INDEX, TITLE_PT, HEADING_SIZES, BODY_SIZES = saved
+            FONT, FONT_FILE, FONT_INDEX, TITLE_PT, HEADING_SIZES, BODY_SIZES, TITLE_SLIDE_SIZES = saved
             HEADING_PT, BODY_PT = HEADING_SIZES[-1], BODY_SIZES[-1]
 
 
@@ -388,7 +393,9 @@ def _validate(spec, min_slides, max_slides):
             errors.append("Pyramid: no Sequence slide - the executive summary is the agenda.")
         errors += pyramid_errors(slides)
 
-    _check_line(errors, "Title", spec.get("title", ""), 8, TITLE_PT, SLIDE_W - 2 * LEFT)
+    parts = title_parts(spec)
+    for n, part in enumerate(parts, start=1):
+        _check_line(errors, f"Title line {n}", part, 7, TITLE_SLIDE_SIZES[-1], SLIDE_W - 2 * LEFT)
     width = COL_W if spec.get("agenda") and len(slides) > MAX_LINES else TEXT_W
     for i, s in enumerate(slides, start=2 + (1 if spec.get("agenda") else 0)):
         errors += slide_errors(s, i, structure, width)
@@ -507,17 +514,51 @@ def lines_box(slide, left, top, width, lines, pt, n=None):
     return tf
 
 
-def title_slide(prs, title, date=None):
+def title_parts(spec):
+    """['Kill Tourism', 'Build Tourservation']: from "title" + "title2", or split once at
+    a colon, bar, dash or comma in the title. One part when there is nothing to split."""
+    title = clean(spec.get("title", "")).rstrip(",:;")
+    second = clean(spec.get("title2", "")) if spec.get("title2") else ""
+    if second:
+        return [title, second]
+    for sep in TITLE_SEPARATORS:
+        if sep in title:
+            a, b = title.split(sep, 1)
+            if a.strip() and b.strip():
+                return [a.strip(), b.strip()]
+    return [title]
+
+
+def full_title(spec):
+    return " ".join(title_parts(spec))
+
+
+def title_layout(spec):
+    """Title-slide lines, their size and the box they sit in (EMU), tight together."""
+    parts = title_parts(spec)
+    width = SLIDE_W - 2 * LEFT
+    pt = next((p for p in TITLE_SLIDE_SIZES if all(fits_one_line(x, p, width) for x in parts)),
+              TITLE_SLIDE_SIZES[-1])
+    line_h = Pt(pt * 1.08)
+    box_h = int(line_h * len(parts)) + Inches(0.1)
+    middle = Inches(4.55) if (ASSETS / "logo_title.png").exists() else Inches(3.75)
+    return parts, pt, (LEFT, middle - box_h // 2, width, box_h)
+
+
+def title_slide(prs, spec):
     s = blank(prs)
     logo = ASSETS / "logo_title.png"
     if logo.exists():
         pic = s.shapes.add_picture(str(logo), 0, Inches(2.2), height=Inches(1.6))
         pic.left = int((SLIDE_W - pic.width) / 2)
-        top = Inches(4.1)
-    else:
-        top = Inches(3.3)
-    tf = textbox(s, LEFT, top, SLIDE_W - 2 * LEFT, Inches(0.9), MSO_ANCHOR.MIDDLE)
-    write(tf.paragraphs[0], clean(title), TITLE_PT, GREY_CLOSING, PP_ALIGN.CENTER)
+    parts, pt, (x, y, w, h) = title_layout(spec)
+    tf = textbox(s, x, y, w, h, MSO_ANCHOR.MIDDLE)
+    for n, part in enumerate(parts):
+        p = tf.paragraphs[0] if n == 0 else tf.add_paragraph()
+        p.line_spacing = 0.9          # minimum space between the two lines
+        p.space_before = p.space_after = Pt(0)
+        write(p, part, pt, TITLE_COLORS[min(n, 1)], PP_ALIGN.CENTER)
+    date = spec.get("date")
     if date:
         tf = textbox(s, LEFT, Inches(6.3), SLIDE_W - 2 * LEFT, Inches(0.5), MSO_ANCHOR.MIDDLE)
         write(tf.paragraphs[0], clean(date).upper(), BODY_PT, GREY_HEADING, PP_ALIGN.CENTER)
@@ -669,7 +710,7 @@ def build(spec, out_path):
 def _build(spec, out_path):
     prs = Presentation()
     prs.slide_width, prs.slide_height = SLIDE_W, SLIDE_H
-    title_slide(prs, spec["title"], spec.get("date"))
+    title_slide(prs, spec)
     if spec.get("agenda"):
         content_slide(prs, agenda_slide(spec))
     for s in spec.get("slides", []):

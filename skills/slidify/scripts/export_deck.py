@@ -136,8 +136,14 @@ def render_slides(spec):
     # Title
     img = Image.new("RGB", (W, H), "white")
     d = ImageDraw.Draw(img)
-    has_logo = _logo(img, "logo_title.png", None, int(2.2 * PX_PER_IN), int(1.6 * PX_PER_IN))
-    _centered(d, 4.1 if has_logo else 3.3, 0.9, bd.clean(spec["title"]), bd.TITLE_PT, bd.GREY_CLOSING)
+    _logo(img, "logo_title.png", None, int(2.2 * PX_PER_IN), int(1.6 * PX_PER_IN))
+    parts, tpt, (_, ty, _, th) = bd.title_layout(spec)        # dark line, lighter line, tight
+    line_h = _pt(tpt * 1.08)
+    y = _px(ty) + (_px(th) - line_h * len(parts)) / 2
+    for n, part in enumerate(parts):
+        f = _font(tpt)
+        _text(d, (W - d.textlength(part, font=f)) / 2, y, part, tpt, bd.TITLE_COLORS[min(n, 1)])
+        y += line_h
     if spec.get("date"):
         _centered(d, 6.3, 0.5, bd.clean(spec["date"]).upper(), bd.BODY_SIZES[-1], bd.GREY_HEADING)
     slides.append(img)
@@ -250,7 +256,10 @@ def write_docx(spec, path):
         return p
 
     center = WD_ALIGN_PARAGRAPH.CENTER
-    para(bd.clean(spec["title"]), bd.TITLE_PT, bd.GREY_CLOSING, center, before=170, after=24)
+    parts = bd.title_parts(spec)
+    for n, part in enumerate(parts):
+        para(part, bd.TITLE_SLIDE_SIZES[0], bd.TITLE_COLORS[min(n, 1)], center,
+             before=170 if n == 0 else 0, after=24 if n == len(parts) - 1 else 0)
     if spec.get("date"):
         para(bd.clean(spec["date"]).upper(), bd.BODY_SIZES[-1], bd.GREY_HEADING, center)
     doc.paragraphs[-1].runs[-1].add_break(WD_BREAK.PAGE)
@@ -330,7 +339,7 @@ def main():
             print("  - " + e)
         sys.exit(1)
     mode = "Pyramid" if spec.get("structure") == "pyramid" else "Standard"
-    out = export_all(spec, args[1], stem=f"{bd.clean(spec['title'])} - {mode}")
+    out = export_all(spec, args[1], stem=f"{bd.full_title(spec)} - {mode}")
     for k, v in out.items():
         print(k, ":", f"{len(v)} files" if isinstance(v, list) else v)
 

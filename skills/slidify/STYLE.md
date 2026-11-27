@@ -7,7 +7,8 @@ Taken from the owner's reference deck, `reference/CMPO Gov.pdf`. Open it wheneve
 - **Background:** plain white. No colour fills, shapes, icons, stock images or decoration.
 - **Greys only:** headings `#A6A6A6`, title and THANK YOU `#808080`, body text black.
 - **Font:** Nirmala Text, regular weight (never bold).
-- **Sizes:** title slide 36 pt (THANK YOU too). Slide headings 22-24 pt. Body lines 18-20 pt.
+- **Title slide:** 40-44 pt (44 unless a line would not fit), in two lines with almost no space between them: the first part in dark grey `#2c3137`, the second part under it in lighter grey `#8a929c` (e.g. "Kill Tourism" / "Build Tourservation"). Spec: `"title"` and `"title2"`; a title with a colon, dash or comma is split there automatically.
+- **Sizes:** THANK YOU and Appendix 36 pt. Slide headings 22-24 pt. Body lines 18-20 pt.
   The builder uses 24 and 20, and drops to 22 or 18 only when a line would not otherwise fit on one line. Body lines on a slide always share one size.
 - **Heading:** top left, grey, short.
 - **Body:** plain lines aligned left, with **no bullet markers**, generous space between lines.

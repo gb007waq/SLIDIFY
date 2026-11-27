@@ -33,7 +33,8 @@ If you can read PDFs, look at `reference/CMPO Gov.pdf` too: match its tone, line
 
    ```json
    {
-     "title": "Deck title",
+     "title": "Kill Tourism",
+     "title2": "Build Tourservation",
      "date": "NOV, 2026",
      "agenda": true,
      "slides": [

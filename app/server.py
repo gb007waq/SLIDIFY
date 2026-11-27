@@ -176,7 +176,7 @@ def first_prompt(job):
     if pyramid:
         rules = [PYRAMID_GUIDE, "",
                  "Builder limits: every sentence must fit on one line of a 16:9 slide at 20 pt."]
-        schema = ('{"title": str, "date": str, "structure": "pyramid", "agenda": false, "slides": ['
+        schema = ('{"title": str, "title2": str, "date": str, "structure": "pyramid", "agenda": false, "slides": ['
                   '{"kind": "summary", "heading": str, "lines": [str]}, '
                   '{"kind": "pillar"|"evidence"|"next", "heading": str, "fact": [2 str], "proof": [4 str], "evidence": [2 str]}, '
                   '{"kind": "data", "heading": str, "kpis": [{"value": str, "label": str}], '
@@ -189,7 +189,7 @@ def first_prompt(job):
                  "Builder limits: at most 12 words per line;",
                  "headings at most 5 words; every line must fit on one line of a 16:9 slide at 20 pt",
                  "(two-column lines are half width). The agenda lists up to 16 content headings."]
-        schema = ('{"title": str, "date": str, "agenda": bool, "slides": [{"heading": str, "lines": [str]}'
+        schema = ('{"title": str, "title2": str, "date": str, "agenda": bool, "slides": [{"heading": str, "lines": [str]}'
                   ' or {"heading": str, "left": [str], "right": [str]}]}')
     lines = [
         "You are SLIDIFY, the owner's presentation agent.",
@@ -198,6 +198,10 @@ def first_prompt(job):
         "<style_guide>", STYLE, "</style_guide>",
         "",
         *rules,
+        "",
+        "TITLE: the title slide shows the title in two parts - \"title\" (first part, dark grey) and",
+        "\"title2\" (second part under it, lighter grey), e.g. \"Kill Tourism\" / \"Build Tourservation\".",
+        "Split naturally; each part at most 7 words. Leave \"title2\" empty only if the title cannot be split.",
         "",
         f"SLIDE COUNT: {count_rule(job)}",
         "The title slide, the Sequence agenda (if any) and the THANK YOU slide all count"
@@ -289,10 +293,10 @@ def write_big(jid, job, folder):
     schema_start = plan.index("Reply with ONLY JSON")
     schema_line = plan[schema_start:].split("\n")[1]
     if pyramid:
-        plan_schema = ('{"title": str, "date": str, "outline": [{"kind": "summary"|"pillar"|"evidence"|"data"|"next"|"section"|"appendix",'
+        plan_schema = ('{"title": str, "title2": str, "date": str, "outline": [{"kind": "summary"|"pillar"|"evidence"|"data"|"next"|"section"|"appendix",'
                        ' "heading": str}]}  ' f"- exactly {k} entries in presentation order, following the pyramid structure.")
     else:
-        plan_schema = ('{"title": str, "date": str, "agenda": bool, "headings": [str]}  '
+        plan_schema = ('{"title": str, "title2": str, "date": str, "agenda": bool, "headings": [str]}  '
                        f"- exactly {k} distinct headings, in presentation order, at most 5 words each.")
     plan = plan.replace(schema_line, plan_schema)
 
@@ -339,7 +343,7 @@ def write_big(jid, job, folder):
                 s["kind"] = kd
             slides.append(s)
 
-    spec = {"title": outline.get("title") or "Presentation", "date": outline.get("date") or job["date"],
+    spec = {"title": outline.get("title") or "Presentation", "title2": outline.get("title2") or "", "date": outline.get("date") or job["date"],
             "agenda": bool(job["agenda"]), "slides": slides, "style": job.get("style"),
             "structure": job.get("structure", "standard")}
     return spec, session
@@ -428,12 +432,12 @@ def make_deck(jid, prompt, session=None, limits=(1, bd.MAX_SLIDES), feedback=Non
     version = job.get("version", 0) + 1
     out_dir = folder / f"v{version}"
     mode = "Pyramid" if spec.get("structure") == "pyramid" else "Standard"
-    stem = f"{safe_name(bd.clean(spec['title']))} - {mode}"     # e.g. "Solar for KP Schools - Pyramid"
+    stem = f"{safe_name(bd.full_title(spec))} - {mode}"     # e.g. "Solar for KP Schools - Pyramid"
     out = ex.export_all(spec, out_dir, stem=stem)
     (out_dir / "spec.json").write_text(json.dumps(spec, indent=2, ensure_ascii=False), encoding="utf-8")
     base = f"/files/{jid}/v{version}/"
     set_job(jid, status="done", message="Ready", session=session, spec=spec, version=version,
-            title=spec["title"],
+            title=bd.full_title(spec),
             slides=[base + "slides/" + p.name for p in out["png"]],
             downloads={k: base + out[k].name for k in ("pptx", "pdf", "zip", "docx")})
 
@@ -507,7 +511,7 @@ def styles_list():
     return jsonify(default=default, styles=[
         {"id": k, "label": v.get("label", k), "font": v.get("font"), "ready": bd.style_ready(v),
          "stand_in": bd.style_ready(v) and bd.style_file(v)[1],
-         "title_pt": v.get("title_pt"), "heading_pt": v.get("heading_pt"), "body_pt": v.get("body_pt")}
+         "title_pt": v.get("title_pt"), "title_slide_pt": list(v.get("title_slide_pt", bd.TITLE_SLIDE_SIZES)), "heading_pt": v.get("heading_pt"), "body_pt": v.get("body_pt")}
         for k, v in styles.items()])
 
 
